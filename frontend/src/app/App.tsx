@@ -17,6 +17,12 @@ import { Settings as ProjectSettings } from "./components/Settings";
 
 type Page = "home" | "workplan" | "progress" | "dataentry" | "reports" | "settings";
 
+function hasPasswordRecoveryToken(): boolean {
+  const query = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  return query.get("type") === "recovery" || hash.get("type") === "recovery";
+}
+
 const navItems: { id: Page; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "home", label: "Home", icon: LayoutDashboard },
   { id: "workplan", label: "Work Plan & Activities", icon: ClipboardList },
@@ -50,6 +56,7 @@ export default function App() {
   const [page, setPage] = useState<Page>("home");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [authenticated, setAuthenticated] = useState<boolean | null>(supabase ? null : true);
+  const [passwordRecovery, setPasswordRecovery] = useState(hasPasswordRecoveryToken);
   const [signingOut, setSigningOut] = useState(false);
   const [memberships, setMemberships] = useState<ProjectMembership[]>(supabase ? [] : [demoMembership]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(supabase ? null : demoMembership.projects.id);
@@ -86,8 +93,14 @@ export default function App() {
 
   useEffect(() => {
     if (!supabase) return;
-    void supabase.auth.getSession().then(({ data }) => setAuthenticated(Boolean(data.session)));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const recoveryFromUrl = hasPasswordRecoveryToken();
+    void supabase.auth.getSession().then(({ data }) => setAuthenticated(recoveryFromUrl ? false : Boolean(data.session)));
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || recoveryFromUrl) {
+        setPasswordRecovery(true);
+        setAuthenticated(false);
+        return;
+      }
       setAuthenticated(Boolean(session));
     });
     return () => listener.subscription.unsubscribe();
@@ -120,7 +133,16 @@ export default function App() {
   }
 
   if (!authenticated) {
-    return <Login onSignedIn={() => setAuthenticated(true)} />;
+    return (
+      <Login
+        passwordRecovery={passwordRecovery}
+        onSignedIn={() => setAuthenticated(true)}
+        onPasswordReset={() => {
+          setPasswordRecovery(false);
+          setAuthenticated(false);
+        }}
+      />
+    );
   }
 
   const selectedMembership = memberships.find((membership) => membership.projects.id === selectedProjectId);

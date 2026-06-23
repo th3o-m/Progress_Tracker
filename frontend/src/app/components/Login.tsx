@@ -1,15 +1,17 @@
-import { useState, type FormEvent } from "react";
-import { CheckCircle2, Eye, EyeOff, LogIn, UserPlus } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { CheckCircle2, Eye, EyeOff, KeyRound, LogIn, Mail, UserPlus } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 
 interface LoginProps {
   onSignedIn: () => void;
+  passwordRecovery?: boolean;
+  onPasswordReset?: () => void;
 }
 
-type Mode = "login" | "signup";
+type Mode = "login" | "signup" | "forgot" | "reset";
 
-export function Login({ onSignedIn }: LoginProps) {
-  const [mode, setMode] = useState<Mode>("login");
+export function Login({ onSignedIn, passwordRecovery = false, onPasswordReset }: LoginProps) {
+  const [mode, setMode] = useState<Mode>(passwordRecovery ? "reset" : "login");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -20,12 +22,17 @@ export function Login({ onSignedIn }: LoginProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (passwordRecovery) switchMode("reset");
+  }, [passwordRecovery]);
+
   function switchMode(nextMode: Mode) {
     setMode(nextMode);
     setError(null);
     setMessage(null);
     setPassword("");
     setConfirmPassword("");
+    setShowPassword(false);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -49,7 +56,49 @@ export function Login({ onSignedIn }: LoginProps) {
       }
     }
 
+    if (mode === "reset") {
+      if (password.length < 8) {
+        setError("Password must contain at least 8 characters.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+      }
+    }
+
     setSubmitting(true);
+    if (mode === "forgot") {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+        redirectTo: `${window.location.origin}${window.location.pathname}`,
+      });
+      setSubmitting(false);
+      if (resetError) {
+        setError(resetError.message);
+        return;
+      }
+      setMessage("If an account exists for that email, a password reset link has been sent.");
+      return;
+    }
+
+    if (mode === "reset") {
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) {
+        setSubmitting(false);
+        setError(updateError.message);
+        return;
+      }
+      await supabase.auth.signOut({ scope: "local" });
+      window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`);
+      onPasswordReset?.();
+      setSubmitting(false);
+      setMode("login");
+      setPassword("");
+      setConfirmPassword("");
+      setMessage("Password updated. Sign in with your new password.");
+      return;
+    }
+
     if (mode === "login") {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
@@ -101,7 +150,7 @@ export function Login({ onSignedIn }: LoginProps) {
 
         {isSupabaseConfigured ? (
           <>
-            <div className="grid grid-cols-2 rounded-md bg-secondary p-1 mb-6" role="tablist" aria-label="Account access">
+            {(mode === "login" || mode === "signup") ? <div className="grid grid-cols-2 rounded-md bg-secondary p-1 mb-6" role="tablist" aria-label="Account access">
               <button
                 type="button"
                 role="tab"
@@ -120,7 +169,14 @@ export function Login({ onSignedIn }: LoginProps) {
               >
                 Create account
               </button>
-            </div>
+            </div> : (
+              <div className="mb-6">
+                <h2 className="font-bold text-foreground">{mode === "forgot" ? "Reset your password" : "Choose a new password"}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {mode === "forgot" ? "Enter your account email and we’ll send you a recovery link." : "Your new password must contain at least 8 characters."}
+                </p>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === "signup" && (
@@ -149,7 +205,7 @@ export function Login({ onSignedIn }: LoginProps) {
                 </>
               )}
 
-              <label className="block text-sm text-foreground">
+              {mode !== "reset" && <label className="block text-sm text-foreground">
                 Email
                 <input
                   type="email"
@@ -159,15 +215,15 @@ export function Login({ onSignedIn }: LoginProps) {
                   onChange={(event) => setEmail(event.target.value)}
                   className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-[#1a3a6b]"
                 />
-              </label>
+              </label>}
 
-              <label className="block text-sm text-foreground">
-                Password
+              {mode !== "forgot" && <label className="block text-sm text-foreground">
+                {mode === "reset" ? "New password" : "Password"}
                 <span className="relative mt-1 block">
                   <input
                     type={showPassword ? "text" : "password"}
                     autoComplete={mode === "login" ? "current-password" : "new-password"}
-                    minLength={mode === "signup" ? 8 : undefined}
+                    minLength={mode === "signup" || mode === "reset" ? 8 : undefined}
                     required
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
@@ -182,11 +238,19 @@ export function Login({ onSignedIn }: LoginProps) {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </span>
-              </label>
+              </label>}
 
-              {mode === "signup" && (
+              {mode === "login" && (
+                <div className="-mt-2 text-right">
+                  <button type="button" onClick={() => switchMode("forgot")} className="text-sm font-semibold text-[#1a3a6b] hover:underline">
+                    Forgot password?
+                  </button>
+                </div>
+              )}
+
+              {(mode === "signup" || mode === "reset") && (
                 <label className="block text-sm text-foreground">
-                  Confirm password
+                  Confirm {mode === "reset" ? "new " : ""}password
                   <input
                     type={showPassword ? "text" : "password"}
                     autoComplete="new-password"
@@ -209,14 +273,17 @@ export function Login({ onSignedIn }: LoginProps) {
 
               <button
                 type="submit"
-                disabled={submitting || Boolean(message)}
+                disabled={submitting || (Boolean(message) && mode !== "login")}
                 className="w-full flex items-center justify-center gap-2 rounded-md bg-[#1a3a6b] px-4 py-2.5 text-white font-semibold disabled:opacity-60"
               >
-                {mode === "login" ? <LogIn className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-                {submitting ? "Please wait..." : mode === "login" ? "Sign in" : "Create account"}
+                {mode === "login" && <LogIn className="w-4 h-4" />}
+                {mode === "signup" && <UserPlus className="w-4 h-4" />}
+                {mode === "forgot" && <Mail className="w-4 h-4" />}
+                {mode === "reset" && <KeyRound className="w-4 h-4" />}
+                {submitting ? "Please wait..." : mode === "login" ? "Sign in" : mode === "signup" ? "Create account" : mode === "forgot" ? "Send reset link" : "Update password"}
               </button>
 
-              {message && (
+              {(message || mode === "forgot") && (
                 <button type="button" onClick={() => switchMode("login")} className="w-full text-sm font-semibold text-[#1a3a6b] hover:underline">
                   Return to sign in
                 </button>
