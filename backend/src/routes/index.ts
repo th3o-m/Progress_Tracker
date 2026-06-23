@@ -1,0 +1,21 @@
+import { Router } from 'express';
+import { activitiesRouter } from './activities.routes.js';
+import { usersRouter, membersRouter } from './auth.routes.js';
+import { beneficiariesRouter } from './beneficiaries.routes.js';
+import { challengesRouter } from './challenges.routes.js';
+import { financialRouter } from './financial.routes.js';
+import { progressRouter } from './progress.routes.js';
+import { projectsRouter } from './projects.routes.js';
+import { reportsRouter } from './reports.routes.js';
+import { projectAccess } from '../middleware/projectAccess.js';
+
+export const apiRouter = Router();
+apiRouter.use('/users', usersRouter);
+apiRouter.use('/projects', projectsRouter);
+apiRouter.use('/projects/:projectId/members', projectAccess, membersRouter);
+apiRouter.use('/projects/:projectId/activities', projectAccess, activitiesRouter);
+apiRouter.use('/projects/:projectId/progress-updates', projectAccess, progressRouter);
+apiRouter.use('/projects/:projectId/challenges', projectAccess, challengesRouter);
+apiRouter.use('/projects/:projectId/beneficiaries', projectAccess, beneficiariesRouter);
+apiRouter.use('/projects/:projectId/financial-entries', projectAccess, financialRouter);
+apiRouter.use('/projects/:projectId/reports', projectAccess, reportsRouter);

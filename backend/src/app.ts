@@ -1,0 +1,4 @@
+import cors from 'cors'; import express from 'express'; import helmet from 'helmet'; import { pinoHttp } from 'pino-http';
+import { env } from './config/env.js'; import { auth } from './middleware/auth.js'; import { errorHandler, notFound } from './middleware/errorHandler.js'; import { apiRouter } from './routes/index.js';
+export const app = express(); app.disable('x-powered-by'); app.use(helmet()); app.use(cors({ origin: env.FRONTEND_URL, credentials: true, methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'] })); app.use(pinoHttp({ redact: ['req.headers.authorization'] })); app.use(express.json({ limit: '1mb' }));
+app.get('/health', (_req, res) => res.json({ status: 'ok' })); app.use('/api', auth, apiRouter); app.use(notFound); app.use(errorHandler);
