@@ -28,12 +28,14 @@ export async function createReportImport(req: Request, res: Response): Promise<v
     milestones: Array.isArray(input.milestones) ? input.milestones : [input.milestones],
   };
 
-  const { data: existing, error: lookupError } = await supabase
-    .from('project_report_imports')
-    .select('id')
-    .eq('project_id', req.context.projectId)
-    .eq('reporting_period', input.reporting_period)
-    .maybeSingle();
+  const { data: existing, error: lookupError } = input.reporting_period
+    ? await supabase
+      .from('project_report_imports')
+      .select('id')
+      .eq('project_id', req.context.projectId)
+      .eq('reporting_period', input.reporting_period)
+      .maybeSingle()
+    : { data: null, error: null };
   throwDb(lookupError);
 
   if (existing && !overwrite) {

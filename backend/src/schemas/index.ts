@@ -6,6 +6,11 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD');
 const text = z.string().trim().min(1);
 const optionalText = z.string().trim().nullable().optional();
 const progress = z.coerce.number().int().min(0).max(100);
+const nullableDate = z.preprocess((value) => value === '' ? null : value, date.nullable().optional());
+const nullableText = z.preprocess((value) => typeof value === 'string' && value.trim() === '' ? null : value, z.string().trim().min(1).nullable().optional());
+const nullableTextMax = (max: number) => z.preprocess((value) => typeof value === 'string' && value.trim() === '' ? null : value, z.string().trim().min(1).max(max).nullable().optional());
+const nullableNumber = z.preprocess((value) => value === '' ? null : value, z.coerce.number().nullable().optional());
+const nullableProgress = z.preprocess((value) => value === '' ? null : value, progress.nullable().optional());
 
 const activitySchema = z.object({
   code: text.max(50), name: text.max(255), category: text.max(100), district: text.max(100),
@@ -32,22 +37,22 @@ export const generateReportSchema = z.object({ type: z.enum(['pdf', 'excel']), s
 export const reportImportSchema = z.object({
   source_file_name: text.max(255),
   source_sheet_name: text.max(255),
-  reporting_period: date,
-  project_name: text.max(255),
-  project_manager: text.max(255),
-  start_date: date,
-  completion_date: date,
-  budget: z.coerce.number().nonnegative(),
-  executive_summary: text,
-  milestones: z.array(text).min(1).or(text.transform((value) => [value])),
-  progress_achieved: text,
-  percentage_completion: progress,
+  reporting_period: nullableDate,
+  project_name: nullableTextMax(255),
+  project_manager: nullableTextMax(255),
+  start_date: nullableDate,
+  completion_date: nullableDate,
+  budget: nullableNumber.refine((value) => value == null || value >= 0, 'Number must be greater than or equal to 0'),
+  executive_summary: nullableText,
+  milestones: z.array(text).or(text.transform((value) => [value])).default([]),
+  progress_achieved: nullableText,
+  percentage_completion: nullableProgress,
   remarks: optionalText,
   risks: optionalText,
   mitigation: optionalText,
   status: z.enum(['Not Started', 'In Progress', 'Completed', 'On Hold']).nullable().optional(),
   overwrite: z.boolean().default(false),
-}).strict().refine((v) => v.completion_date >= v.start_date, { path: ['completion_date'], message: 'Must be on or after start_date' });
+}).strict().refine((v) => !v.start_date || !v.completion_date || v.completion_date >= v.start_date, { path: ['completion_date'], message: 'Must be on or after start_date' });
 
 const projectSchema = z.object({
   name: text.max(255), description: optionalText, district: optionalText, sector: optionalText,

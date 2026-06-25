@@ -29,19 +29,19 @@ type ImportField = Exclude<keyof ImportedReport, "source_file_name" | "source_sh
 
 const allowedStatuses = ["Not Started", "In Progress", "Completed", "On Hold"] as const;
 const aliases: Record<ImportField, string[]> = {
-  reporting_period: ["reporting period", "report period", "period", "report date"],
-  project_name: ["project name", "project", "name of project"],
-  project_manager: ["project manager", "manager", "project officer"],
-  start_date: ["start date", "commencement date", "project start date"],
-  completion_date: ["completion date", "end date", "project completion date", "planned completion date"],
-  budget: ["budget", "approved budget", "total budget", "budget bwp"],
-  executive_summary: ["executive summary", "summary"],
-  milestones: ["milestones", "milestone"],
-  progress_achieved: ["progress achieved", "achievements", "progress"],
-  percentage_completion: ["percentage completion", "percent completion", "% completion", "completion percentage"],
+  reporting_period: ["reporting period", "report period", "period", "report date", "reporting date", "as at", "as of"],
+  project_name: ["project name", "name of project", "project title", "title of project", "project"],
+  project_manager: ["project manager", "manager", "project officer", "responsible officer", "project lead", "coordinator"],
+  start_date: ["start date", "commencement date", "project start date", "date started", "implementation start date", "effective date"],
+  completion_date: ["completion date", "end date", "project completion date", "planned completion date", "finish date", "closing date"],
+  budget: ["budget", "approved budget", "total budget", "budget bwp", "project budget", "contract amount", "project cost", "allocated budget"],
+  executive_summary: ["executive summary", "summary", "project summary", "overview"],
+  milestones: ["milestones", "milestone", "key milestones", "deliverables"],
+  progress_achieved: ["progress achieved", "achievements", "progress", "work completed", "progress to date"],
+  percentage_completion: ["percentage completion", "percent completion", "% completion", "completion percentage", "completion %", "% complete", "percentage complete"],
   remarks: ["remarks", "comments", "notes"],
-  risks: ["risks", "risk"],
-  mitigation: ["mitigation", "mitigation plan", "risk mitigation"],
+  risks: ["risks", "risk", "challenges", "issues"],
+  mitigation: ["mitigation", "mitigation plan", "risk mitigation", "remedial action", "corrective action"],
   status: ["status", "project status"],
 };
 
@@ -64,6 +64,8 @@ function toDate(value: unknown): string {
   if (!raw) return "";
   const native = new Date(raw);
   if (!Number.isNaN(native.getTime())) return native.toISOString().slice(0, 10);
+  const isoLike = raw.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+  if (isoLike) return `${isoLike[1]}-${isoLike[2].padStart(2, "0")}-${isoLike[3].padStart(2, "0")}`;
   const match = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
   if (!match) return "";
   const year = match[3].length === 2 ? `20${match[3]}` : match[3];
@@ -90,22 +92,72 @@ function splitMilestones(value: unknown): string[] {
   return cellText(value).split(/\r?\n|;|\u2022/).map((item) => item.trim()).filter(Boolean);
 }
 
+function labelMatches(field: keyof typeof aliases, value: unknown): boolean {
+  const candidate = normalize(value);
+  if (!candidate) return false;
+  return aliases[field].some((alias) => {
+    const label = normalize(alias);
+    if (candidate === label) return true;
+    if (label.length < 8 || !label.includes(" ")) return false;
+    return candidate.includes(label) || label.includes(candidate);
+  });
+}
+
+function hasKnownLabel(value: unknown): boolean {
+  return (Object.keys(aliases) as Array<keyof typeof aliases>).some((field) => labelMatches(field, value));
+}
+
+function valueInLabelCell(field: keyof typeof aliases, value: unknown): string {
+  const raw = cellText(value);
+  if (!raw) return "";
+  const bestAlias = aliases[field]
+    .map((alias) => normalize(alias))
+    .filter((alias) => alias.length >= 8 || alias.includes(" "))
+    .sort((a, b) => b.length - a.length)
+    .find((alias) => normalize(raw).includes(alias));
+
+  if (!bestAlias) return "";
+  const escaped = bestAlias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+  const match = raw.match(new RegExp(`${escaped}\\s*[:\\-=–—]?\\s*(.+)$`, "i"));
+  return match?.[1]?.trim() ?? "";
+}
+
+function firstNearbyValue(rows: unknown[][], rowIndex: number, columnIndex: number): unknown {
+  const row = rows[rowIndex] ?? [];
+  for (let next = columnIndex + 1; next < row.length; next += 1) {
+    if (cellText(row[next]) && !hasKnownLabel(row[next])) return row[next];
+  }
+
+  const belowLimit = Math.min(rows.length, rowIndex + 5);
+  for (let nextRow = rowIndex + 1; nextRow < belowLimit; nextRow += 1) {
+    const sameColumn = rows[nextRow]?.[columnIndex];
+    if (cellText(sameColumn) && !hasKnownLabel(sameColumn)) return sameColumn;
+
+    const nextColumn = rows[nextRow]?.[columnIndex + 1];
+    if (cellText(nextColumn) && !hasKnownLabel(nextColumn)) return nextColumn;
+  }
+
+  return "";
+}
+
 function findValue(rows: unknown[][], field: keyof typeof aliases): unknown {
-  const labels = aliases[field].map(normalize);
   for (const row of rows) {
     for (let index = 0; index < row.length; index += 1) {
-      if (!labels.includes(normalize(row[index]))) continue;
-      for (let next = index + 1; next < row.length; next += 1) {
-        if (cellText(row[next])) return row[next];
-      }
+      if (!labelMatches(field, row[index])) continue;
+      const embedded = valueInLabelCell(field, row[index]);
+      if (embedded) return embedded;
+      const rowIndex = rows.indexOf(row);
+      const nearby = firstNearbyValue(rows, rowIndex, index);
+      if (cellText(nearby)) return nearby;
     }
   }
 
-  for (let rowIndex = 0; rowIndex < Math.min(rows.length, 15); rowIndex += 1) {
-    const headerIndex = rows[rowIndex].findIndex((cell) => labels.includes(normalize(cell)));
+  for (let rowIndex = 0; rowIndex < Math.min(rows.length, 25); rowIndex += 1) {
+    const headerIndex = rows[rowIndex].findIndex((cell) => labelMatches(field, cell));
     if (headerIndex === -1) continue;
     for (let dataIndex = rowIndex + 1; dataIndex < rows.length; dataIndex += 1) {
-      if (cellText(rows[dataIndex][headerIndex])) return rows[dataIndex][headerIndex];
+      const value = rows[dataIndex]?.[headerIndex];
+      if (cellText(value) && !hasKnownLabel(value)) return value;
     }
   }
   return "";
@@ -143,21 +195,28 @@ function parseSheet(workbook: XLSX.WorkBook, sheetName: string, fileName: string
 
 function validate(report: ImportedReport): string[] {
   const errors: string[] = [];
-  const required: Array<[keyof ImportedReport, string]> = [
+  if (report.percentage_completion !== "" && Number.isNaN(Number(report.percentage_completion))) errors.push("Percentage Completion must be numeric.");
+  if (typeof report.percentage_completion === "number" && (report.percentage_completion < 0 || report.percentage_completion > 100)) errors.push("Percentage Completion must be between 0 and 100.");
+  if (report.budget !== "" && Number.isNaN(Number(report.budget))) errors.push("Budget must be numeric.");
+  if (report.start_date && report.completion_date && report.completion_date < report.start_date) errors.push("Completion Date must be on or after Start Date.");
+  if (report.status_input && report.status === null) errors.push("Status must be Not Started, In Progress, Completed, or On Hold.");
+  return [...new Set(errors)];
+}
+
+function getMissingWarnings(report: ImportedReport): string[] {
+  const warnings: string[] = [];
+  const expected: Array<[keyof ImportedReport, string]> = [
     ["project_name", "Project Name"], ["project_manager", "Project Manager"], ["start_date", "Start Date"],
     ["completion_date", "Completion Date"], ["budget", "Budget"], ["executive_summary", "Executive Summary"],
     ["progress_achieved", "Progress Achieved"], ["percentage_completion", "Percentage Completion"], ["reporting_period", "Reporting Period"],
   ];
-  required.forEach(([key, label]) => { if (report[key] === "" || report[key] === null || (Array.isArray(report[key]) && report[key].length === 0)) errors.push(`${label} is required.`); });
-  if (report.milestones.length === 0) errors.push("Milestones are required.");
-  if (report.percentage_completion === "" || Number.isNaN(Number(report.percentage_completion))) errors.push("Percentage Completion must be numeric.");
-  if (typeof report.percentage_completion === "number" && (report.percentage_completion < 0 || report.percentage_completion > 100)) errors.push("Percentage Completion must be between 0 and 100.");
-  if (report.budget === "" || Number.isNaN(Number(report.budget))) errors.push("Budget must be numeric.");
-  if (!report.start_date) errors.push("Start Date must be a valid date.");
-  if (!report.completion_date) errors.push("Completion Date must be a valid date.");
-  if (report.start_date && report.completion_date && report.completion_date < report.start_date) errors.push("Completion Date must be on or after Start Date.");
-  if (report.status_input && report.status === null) errors.push("Status must be Not Started, In Progress, Completed, or On Hold.");
-  return [...new Set(errors)];
+  expected.forEach(([key, label]) => { if (report[key] === "" || report[key] === null || (Array.isArray(report[key]) && report[key].length === 0)) warnings.push(label); });
+  if (report.milestones.length === 0) warnings.push("Milestones");
+  return [...new Set(warnings)];
+}
+
+function emptyToNull<T>(value: T | ""): T | null {
+  return value === "" ? null : value;
 }
 
 export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembership[] }) {
@@ -169,6 +228,7 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<ImportedReport | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [missingWarnings, setMissingWarnings] = useState<string[]>([]);
   const [existingImport, setExistingImport] = useState(false);
   const [confirmUpdate, setConfirmUpdate] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -186,7 +246,7 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
   }
 
   function resetImport() {
-    setWorkbookState(null); setSelectedSheet(""); setPreview(null); setValidationErrors([]); setExistingImport(false); setConfirmUpdate(false); setUploadProgress(0); setError(null);
+    setWorkbookState(null); setSelectedSheet(""); setPreview(null); setValidationErrors([]); setMissingWarnings([]); setExistingImport(false); setConfirmUpdate(false); setUploadProgress(0); setError(null);
   }
 
   function uploadFile(event: ChangeEvent<HTMLInputElement>) {
@@ -222,6 +282,7 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
       const errors = validate(report);
       setPreview(report);
       setValidationErrors(errors);
+      setMissingWarnings(getMissingWarnings(report));
       if (errors.length === 0) await checkExisting(projectId, report);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to preview this sheet.");
@@ -238,7 +299,22 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
       void status_input;
       await apiRequest(`/projects/${selectedProjectId}/report-imports`, {
         method: "POST",
-        body: JSON.stringify({ ...payload, overwrite: existingImport && confirmUpdate }),
+        body: JSON.stringify({
+          ...payload,
+          reporting_period: emptyToNull(payload.reporting_period),
+          project_name: emptyToNull(payload.project_name),
+          project_manager: emptyToNull(payload.project_manager),
+          start_date: emptyToNull(payload.start_date),
+          completion_date: emptyToNull(payload.completion_date),
+          budget: emptyToNull(payload.budget),
+          executive_summary: emptyToNull(payload.executive_summary),
+          progress_achieved: emptyToNull(payload.progress_achieved),
+          percentage_completion: emptyToNull(payload.percentage_completion),
+          remarks: emptyToNull(payload.remarks ?? ""),
+          risks: emptyToNull(payload.risks ?? ""),
+          mitigation: emptyToNull(payload.mitigation ?? ""),
+          overwrite: existingImport && confirmUpdate,
+        }),
       });
       setMessage(existingImport ? "Imported report was updated." : "Imported report was saved.");
       setExistingImport(false);
@@ -325,6 +401,7 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
           {!preview ? <p className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">Select a workbook sheet to preview extracted data.</p> : (
             <div className="space-y-4">
               {validationErrors.length > 0 && <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"><p className="font-semibold">Fix these validation errors before importing:</p><ul className="mt-2 list-disc space-y-1 pl-5">{validationErrors.map((item) => <li key={item}>{item}</li>)}</ul></div>}
+              {missingWarnings.length > 0 && <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"><p className="font-semibold">Some information was not found in the workbook.</p><p className="mt-1">The import can continue, but these fields will need to be added manually: {missingWarnings.join(", ")}.</p></div>}
               {existingImport && <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"><label className="flex gap-2"><input type="checkbox" checked={confirmUpdate} onChange={(event) => setConfirmUpdate(event.target.checked)} />A report already exists for this project and reporting period. Update it instead of cancelling.</label></div>}
               <div className="overflow-hidden rounded-md border border-border">
                 {fields.map(([label, value]) => <div key={label} className="grid grid-cols-[170px_1fr] border-b border-border last:border-b-0"><div className="bg-secondary px-3 py-2 text-xs font-semibold text-muted-foreground">{label}</div><div className="px-3 py-2 text-sm text-foreground">{value || <span className="text-muted-foreground">Not found</span>}</div></div>)}
