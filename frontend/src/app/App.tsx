@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   LayoutDashboard, ClipboardList, TrendingUp, PenLine,
-  BarChart3, Settings, Menu, X, ChevronRight, Bell, LogOut,
+  BarChart3, Settings, Menu, X, ChevronRight, Bell, LogOut, FileSpreadsheet,
 } from "lucide-react";
 import { Overview } from "./components/Overview";
 import { WorkPlan } from "./components/WorkPlan";
@@ -14,8 +14,9 @@ import { apiRequest } from "../lib/api";
 import { ProjectSwitcher, type ProjectMembership } from "./components/ProjectSwitcher";
 import { ProjectDataProvider } from "./ProjectDataContext";
 import { Settings as ProjectSettings } from "./components/Settings";
+import { ImportSpreadsheet } from "./components/ImportSpreadsheet";
 
-type Page = "home" | "workplan" | "progress" | "dataentry" | "reports" | "settings";
+type Page = "home" | "workplan" | "progress" | "dataentry" | "import" | "reports" | "settings";
 
 function hasPasswordRecoveryToken(): boolean {
   const query = new URLSearchParams(window.location.search);
@@ -28,6 +29,7 @@ const navItems: { id: Page; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "workplan", label: "Work Plan & Activities", icon: ClipboardList },
   { id: "progress", label: "Progress Tracking", icon: TrendingUp },
   { id: "dataentry", label: "Data Entry", icon: PenLine },
+  { id: "import", label: "Import Spreadsheet", icon: FileSpreadsheet },
   { id: "reports", label: "Reports & Charts", icon: BarChart3 },
   { id: "settings", label: "Settings", icon: Settings },
 ];
@@ -37,6 +39,7 @@ const pageTitle: Record<Page, string> = {
   workplan: "Work Plan & Activities",
   progress: "Progress Tracking",
   dataentry: "Data Entry",
+  import: "Import Spreadsheet",
   reports: "Reports & Charts",
   settings: "Settings",
 };
@@ -151,6 +154,7 @@ export default function App() {
   }
 
   const selectedMembership = memberships.find((membership) => membership.projects.id === selectedProjectId);
+  const visibleNavItems = navItems.filter((item) => item.id !== "import" || memberships.some((membership) => membership.role === "admin" || membership.role === "supervisor"));
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -194,7 +198,7 @@ export default function App() {
 
         {/* Nav */}
         <nav className="flex-1 py-3 overflow-y-auto">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const active = page === item.id;
             return (
               <button
@@ -290,6 +294,7 @@ export default function App() {
           {page === "workplan" && <WorkPlan />}
           {page === "progress" && <ProgressTracking />}
           {page === "dataentry" && <DataEntry />}
+          {page === "import" && <ImportSpreadsheet memberships={memberships} />}
           {page === "reports" && <Reports />}
           {page === "settings" && <ProjectSettings currentUserId={currentUserId} />}
           </ProjectDataProvider>}

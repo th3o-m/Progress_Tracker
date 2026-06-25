@@ -29,6 +29,26 @@ export const decisionSchema = z.object({ reason: z.string().trim().max(1000).opt
 
 export const generateReportSchema = z.object({ type: z.enum(['pdf', 'excel']), start_date: date, end_date: date }).strict().refine((v) => v.end_date >= v.start_date, { path: ['end_date'], message: 'Must be on or after start_date' });
 
+export const reportImportSchema = z.object({
+  source_file_name: text.max(255),
+  source_sheet_name: text.max(255),
+  reporting_period: date,
+  project_name: text.max(255),
+  project_manager: text.max(255),
+  start_date: date,
+  completion_date: date,
+  budget: z.coerce.number().nonnegative(),
+  executive_summary: text,
+  milestones: z.array(text).min(1).or(text.transform((value) => [value])),
+  progress_achieved: text,
+  percentage_completion: progress,
+  remarks: optionalText,
+  risks: optionalText,
+  mitigation: optionalText,
+  status: z.enum(['Not Started', 'In Progress', 'Completed', 'On Hold']).nullable().optional(),
+  overwrite: z.boolean().default(false),
+}).strict().refine((v) => v.completion_date >= v.start_date, { path: ['completion_date'], message: 'Must be on or after start_date' });
+
 const projectSchema = z.object({
   name: text.max(255), description: optionalText, district: optionalText, sector: optionalText,
   start_date: date.nullable().optional(), end_date: date.nullable().optional(),
