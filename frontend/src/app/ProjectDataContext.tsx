@@ -7,11 +7,12 @@ export interface Challenge { id: string; activity_id: string; challenge_type: st
 export interface Beneficiary { id: string; full_name: string; national_id: string; beneficiary_type: string; district: string; contact_number: string | null; created_at: string; }
 export interface FinancialEntry { id: string; activity_id: string; expense_category: string; amount: number; description: string; status: "pending" | "approved" | "rejected"; created_at: string; }
 export interface GeneratedReport { id: string; name: string; report_type: "pdf" | "excel"; file_url: string; created_at: string; }
-export interface ProjectMember { id: string; role: string; district: string | null; profiles: { id: string; email: string; full_name: string; active: boolean } | null; }
+export type ProjectRole = "officer" | "supervisor" | "finance" | "admin";
+export interface ProjectMember { id: string; role: ProjectRole; district: string | null; added_at?: string; profiles: { id: string; email: string; full_name: string; phone?: string | null; active: boolean } | null; }
 
 interface ProjectData {
   projectId: string;
-  role: string;
+  role: ProjectRole;
   activities: Activity[];
   progress: ProgressUpdate[];
   challenges: Challenge[];
@@ -26,7 +27,7 @@ interface ProjectData {
 
 const Context = createContext<ProjectData | null>(null);
 
-export function ProjectDataProvider({ projectId, role, children }: { projectId: string; role: string; children: ReactNode }) {
+export function ProjectDataProvider({ projectId, role, children }: { projectId: string; role: ProjectRole; children: ReactNode }) {
   const [data, setData] = useState<Omit<ProjectData, "loading" | "error" | "refresh">>({ activities: [], progress: [], challenges: [], beneficiaries: [], financial: [], reports: [], members: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

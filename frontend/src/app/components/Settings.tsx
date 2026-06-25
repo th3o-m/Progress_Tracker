@@ -1,63 +1,325 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { Save, ShieldCheck, Trash2, UserPlus } from "lucide-react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import {
+  Check,
+  LoaderCircle,
+  RefreshCw,
+  Save,
+  Search,
+  ShieldCheck,
+  Trash2,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
 import { apiRequest } from "../../lib/api";
-import { useProjectData } from "../ProjectDataContext";
+import { useProjectData, type ProjectMember, type ProjectRole } from "../ProjectDataContext";
 
-const roles = ["officer", "supervisor", "finance", "admin"] as const;
-const roleLabel: Record<(typeof roles)[number], string> = { officer: "Officer", supervisor: "Supervisor", finance: "Finance", admin: "Project Manager (Admin)" };
-const permissions: Record<(typeof roles)[number], string[]> = {
-  officer: ["View assigned district data", "Submit progress and challenges", "Register beneficiaries", "Submit financial entries"],
-  supervisor: ["View all project operations", "Create activities and projects", "Review project metrics", "Generate reports"],
-  finance: ["View project activities", "Submit financial entries", "Approve or reject financial entries"],
-  admin: ["Full project access", "Manage members and roles", "Create and archive projects", "Manage all project records"],
+const roles: ProjectRole[] = ["officer", "supervisor", "finance", "admin"];
+const roleLabel: Record<ProjectRole, string> = {
+  officer: "Officer",
+  supervisor: "Supervisor",
+  finance: "Finance",
+  admin: "Project Manager",
+};
+const permissions: Record<ProjectRole, string[]> = {
+  officer: ["View district-scoped data", "Submit project updates", "Register beneficiaries"],
+  supervisor: ["View all project operations", "Create activities", "Generate reports"],
+  finance: ["View project activities", "Submit expenses", "Review financial entries"],
+  admin: ["Full project access", "Manage members and roles", "Manage all project records"],
 };
 
-export function Settings() {
-  const { projectId, role, members, refresh } = useProjectData();
+interface MemberDraft {
+  role: ProjectRole;
+  district: string;
+}
+
+function getDraft(member: ProjectMember): MemberDraft {
+  return { role: member.role, district: member.district ?? "" };
+}
+
+function isDraftChanged(member: ProjectMember, draft: MemberDraft): boolean {
+  return draft.role !== member.role || draft.district.trim() !== (member.district ?? "");
+}
+
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "?";
+}
+
+function MemberCard({
+  member,
+  draft,
+  canManage,
+  isCurrentUser,
+  busy,
+  onDraftChange,
+  onReset,
+  onSave,
+  onRemove,
+}: {
+  member: ProjectMember;
+  draft: MemberDraft;
+  canManage: boolean;
+  isCurrentUser: boolean;
+  busy: boolean;
+  onDraftChange: (draft: MemberDraft) => void;
+  onReset: () => void;
+  onSave: () => void;
+  onRemove: () => void;
+}) {
+  const name = member.profiles?.full_name || "Unknown employee";
+  const changed = isDraftChanged(member, draft);
+
+  return (
+    <article className="rounded-lg border border-border bg-card p-4 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1a3a6b]/10 text-xs font-bold text-[#1a3a6b]">
+            {initials(name)}
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="truncate text-sm font-semibold text-foreground">{name}</h4>
+              {isCurrentUser && <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">You</span>}
+              {!member.profiles?.active && <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700">Inactive</span>}
+            </div>
+            <p className="truncate text-xs text-muted-foreground">{member.profiles?.email || "Email unavailable"}</p>
+          </div>
+        </div>
+        <span className="rounded-full bg-[#1a3a6b]/10 px-2.5 py-1 text-[11px] font-semibold text-[#1a3a6b]">{roleLabel[member.role]}</span>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-medium text-muted-foreground">
+          Project role
+          <select
+            value={draft.role}
+            onChange={(event) => onDraftChange({ ...draft, role: event.target.value as ProjectRole })}
+            disabled={!canManage || isCurrentUser || busy}
+            className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {roles.map((item) => <option key={item} value={item}>{roleLabel[item]}</option>)}
+          </select>
+        </label>
+        <label className="text-xs font-medium text-muted-foreground">
+          District scope
+          <input
+            value={draft.district}
+            onChange={(event) => onDraftChange({ ...draft, district: event.target.value })}
+            disabled={!canManage || isCurrentUser || busy}
+            placeholder="All districts"
+            maxLength={100}
+            className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+          />
+        </label>
+      </div>
+
+      <p className="mt-3 text-xs leading-5 text-muted-foreground">{permissions[draft.role].join(" · ")}</p>
+
+      {canManage && !isCurrentUser && (
+        <div className="mt-4 flex items-center justify-end gap-2 border-t border-border pt-3">
+          {changed && (
+            <button type="button" onClick={onReset} disabled={busy} className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-secondary disabled:opacity-50">
+              <X className="h-3.5 w-3.5" />Discard
+            </button>
+          )}
+          <button type="button" onClick={onRemove} disabled={busy} className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">
+            <Trash2 className="h-3.5 w-3.5" />Remove
+          </button>
+          <button type="button" onClick={onSave} disabled={busy || !changed} className="inline-flex items-center gap-1.5 rounded-md bg-[#1a3a6b] px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+            {busy ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            Save access
+          </button>
+        </div>
+      )}
+    </article>
+  );
+}
+
+export function Settings({ currentUserId }: { currentUserId?: string | null }) {
+  const { projectId, role, members, loading, error: projectDataError, refresh } = useProjectData();
   const canManage = role === "admin";
+  const canViewMembers = canManage;
   const [email, setEmail] = useState("");
-  const [newRole, setNewRole] = useState<(typeof roles)[number]>("officer");
+  const [newRole, setNewRole] = useState<ProjectRole>("officer");
   const [district, setDistrict] = useState("");
-  const [drafts, setDrafts] = useState<Record<string, { role: string; district: string }>>({});
+  const [drafts, setDrafts] = useState<Record<string, MemberDraft>>({});
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"all" | ProjectRole>("all");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    setDrafts(Object.fromEntries(members.map((member) => [member.id, { role: member.role, district: member.district ?? "" }])));
+    setDrafts(Object.fromEntries(members.map((member) => [member.id, getDraft(member)])));
   }, [members]);
 
+  useEffect(() => {
+    setSearch("");
+    setRoleFilter("all");
+    setError(null);
+    setMessage(null);
+  }, [projectId]);
+
+  const filteredMembers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return members.filter((member) => {
+      const matchesRole = roleFilter === "all" || member.role === roleFilter;
+      const matchesQuery = !query || [member.profiles?.full_name, member.profiles?.email, member.district, roleLabel[member.role]]
+        .some((value) => value?.toLowerCase().includes(query));
+      return matchesRole && matchesQuery;
+    });
+  }, [members, roleFilter, search]);
+
+  const roleCounts = useMemo(() => Object.fromEntries(roles.map((item) => [item, members.filter((member) => member.role === item).length])) as Record<ProjectRole, number>, [members]);
+
+  function showError(requestError: unknown, fallback: string) {
+    setError(requestError instanceof Error ? requestError.message : fallback);
+    setMessage(null);
+  }
+
   async function addMember(event: FormEvent) {
-    event.preventDefault(); setBusy("add"); setError(null); setMessage(null);
+    event.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || busy) return;
+    setBusy("add");
+    setError(null);
+    setMessage(null);
     try {
-      await apiRequest(`/projects/${projectId}/members`, { method: "POST", body: JSON.stringify({ email, role: newRole, district: district || null }) });
-      setEmail(""); setDistrict(""); setNewRole("officer"); setMessage("User added and permissions assigned."); await refresh();
-    } catch (requestError) { setError(requestError instanceof Error ? requestError.message : "Unable to add user"); }
-    finally { setBusy(null); }
+      await apiRequest(`/projects/${projectId}/members`, {
+        method: "POST",
+        body: JSON.stringify({ email: normalizedEmail, role: newRole, district: district.trim() || null }),
+      });
+      setEmail("");
+      setDistrict("");
+      setNewRole("officer");
+      await refresh();
+      setMessage(`${normalizedEmail} now has access to this project.`);
+    } catch (requestError) {
+      showError(requestError, "Unable to add the employee");
+    } finally {
+      setBusy(null);
+    }
   }
 
-  async function saveMember(memberId: string) {
-    const draft = drafts[memberId]; if (!draft) return;
-    setBusy(memberId); setError(null); setMessage(null);
+  async function saveMember(member: ProjectMember) {
+    const draft = drafts[member.id];
+    if (!draft || !isDraftChanged(member, draft) || busy) return;
+    setBusy(member.id);
+    setError(null);
+    setMessage(null);
     try {
-      await apiRequest(`/projects/${projectId}/members/${memberId}`, { method: "PATCH", body: JSON.stringify({ role: draft.role, district: draft.district || null }) });
-      setMessage("Role and permissions updated."); await refresh();
-    } catch (requestError) { setError(requestError instanceof Error ? requestError.message : "Unable to update user"); }
+      await apiRequest(`/projects/${projectId}/members/${member.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ role: draft.role, district: draft.district.trim() || null }),
+      });
+      await refresh();
+      setMessage(`${member.profiles?.full_name || "Employee"}'s access was updated.`);
+    } catch (requestError) {
+      showError(requestError, "Unable to update the employee's access");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function removeMember(member: ProjectMember) {
+    const name = member.profiles?.full_name || member.profiles?.email || "this employee";
+    if (!window.confirm(`Remove ${name} from this project? They will immediately lose access to all project data.`)) return;
+    setBusy(member.id);
+    setError(null);
+    setMessage(null);
+    try {
+      await apiRequest(`/projects/${projectId}/members/${member.id}`, { method: "DELETE" });
+      await refresh();
+      setMessage(`${name} no longer has access to this project.`);
+    } catch (requestError) {
+      showError(requestError, "Unable to remove the employee");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function reloadMembers() {
+    if (busy) return;
+    setBusy("refresh");
+    setError(null);
+    try { await refresh(); }
+    catch (requestError) { showError(requestError, "Unable to refresh project access"); }
     finally { setBusy(null); }
   }
 
-  async function removeMember(memberId: string, name: string) {
-    if (!window.confirm(`Remove ${name} from this project?`)) return;
-    setBusy(memberId); setError(null); setMessage(null);
-    try { await apiRequest(`/projects/${projectId}/members/${memberId}`, { method: "DELETE" }); setMessage("User removed from the project."); await refresh(); }
-    catch (requestError) { setError(requestError instanceof Error ? requestError.message : "Unable to remove user"); }
-    finally { setBusy(null); }
-  }
+  return (
+    <div className="space-y-6">
+      <section className="rounded-lg border border-border bg-card p-5 shadow-sm sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-[#1a3a6b]/10 p-2.5"><ShieldCheck className="h-5 w-5 text-[#1a3a6b]" /></div>
+            <div>
+              <h2 className="font-bold text-foreground">Project access management</h2>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                Access and roles apply only to the selected project. {canManage ? "Add employees and maintain their permissions here." : "Your project manager controls team access."}
+              </p>
+            </div>
+          </div>
+          {canViewMembers && (
+            <button type="button" onClick={reloadMembers} disabled={Boolean(busy) || loading} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-secondary disabled:opacity-50">
+              <RefreshCw className={`h-3.5 w-3.5 ${busy === "refresh" || loading ? "animate-spin" : ""}`} />Refresh
+            </button>
+          )}
+        </div>
+        {(error || projectDataError) && <div role="alert" className="mt-4 flex items-start justify-between gap-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"><span>{error || projectDataError}</span>{error && <button type="button" onClick={() => setError(null)} aria-label="Dismiss error"><X className="h-4 w-4" /></button>}</div>}
+        {message && <div role="status" className="mt-4 flex items-start justify-between gap-3 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800"><span className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />{message}</span><button type="button" onClick={() => setMessage(null)} aria-label="Dismiss message"><X className="h-4 w-4" /></button></div>}
+      </section>
 
-  return <div className="space-y-6">
-    <section className="rounded-md border border-border bg-card p-6 shadow-sm"><div className="flex items-start gap-3"><ShieldCheck className="h-6 w-6 text-[#1a3a6b]" /><div><h2 className="font-bold text-foreground">Roles & Permissions</h2><p className="mt-1 text-sm text-muted-foreground">Roles apply only to the selected project. Each role grants the permission bundle shown below.</p></div></div>{error && <p className="mt-4 rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>}{message && <p className="mt-4 rounded bg-green-50 p-3 text-sm text-green-700">{message}</p>}</section>
-    <div className="grid grid-cols-4 gap-4">{roles.map((item) => <section key={item} className="rounded-md border border-border bg-card p-4"><h3 className="mb-3 font-bold text-[#1a3a6b]">{roleLabel[item]}</h3><ul className="space-y-2 text-xs text-muted-foreground">{permissions[item].map((permission) => <li key={permission} className="flex gap-2"><span className="text-green-600">✓</span>{permission}</li>)}</ul></section>)}</div>
-    {canManage && <section className="rounded-md border border-border bg-card p-5 shadow-sm"><h3 className="mb-4 flex items-center gap-2 font-semibold"><UserPlus className="h-4 w-4" />Add existing employee</h3><form onSubmit={addMember} className="grid grid-cols-[2fr_1fr_1fr_auto] items-end gap-3"><label className="text-sm">Employee email<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2" /></label><label className="text-sm">Role<select value={newRole} onChange={(event) => setNewRole(event.target.value as typeof newRole)} className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2">{roles.map((item) => <option key={item} value={item}>{roleLabel[item]}</option>)}</select></label><label className="text-sm">District scope<input value={district} onChange={(event) => setDistrict(event.target.value)} placeholder="Optional" className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2" /></label><button disabled={busy === "add"} className="rounded-md bg-[#1a3a6b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{busy === "add" ? "Adding..." : "Add user"}</button></form></section>}
-    <section className="overflow-hidden rounded-md border border-border bg-card shadow-sm"><div className="border-b border-border px-5 py-4"><h3 className="font-semibold">Project members</h3></div>{members.length === 0 ? <p className="p-6 text-sm text-muted-foreground">No members are available.</p> : <table className="w-full text-sm"><thead className="bg-secondary"><tr>{["Employee", "Role", "District scope", "Permissions", "Actions"].map((item) => <th key={item} className="px-4 py-2 text-left text-xs uppercase">{item}</th>)}</tr></thead><tbody>{members.map((member) => { const draft = drafts[member.id] ?? { role: member.role, district: member.district ?? "" }; return <tr key={member.id} className="border-t border-border"><td className="px-4 py-3"><strong>{member.profiles?.full_name ?? "Unknown user"}</strong><p className="text-xs text-muted-foreground">{member.profiles?.email}</p></td><td className="px-4 py-3">{canManage ? <select value={draft.role} onChange={(event) => setDrafts((current) => ({ ...current, [member.id]: { ...draft, role: event.target.value } }))} className="rounded border border-border bg-background px-2 py-1">{roles.map((item) => <option key={item} value={item}>{roleLabel[item]}</option>)}</select> : <span>{roleLabel[member.role as keyof typeof roleLabel] ?? member.role}</span>}</td><td className="px-4 py-3">{canManage ? <input value={draft.district} onChange={(event) => setDrafts((current) => ({ ...current, [member.id]: { ...draft, district: event.target.value } }))} className="w-32 rounded border border-border bg-background px-2 py-1" placeholder="All" /> : member.district || "All"}</td><td className="max-w-xs px-4 py-3 text-xs text-muted-foreground">{permissions[(draft.role in permissions ? draft.role : member.role) as keyof typeof permissions]?.join(" · ")}</td><td className="px-4 py-3">{canManage && <div className="flex gap-1"><button onClick={() => saveMember(member.id)} disabled={busy === member.id} title="Save role" className="rounded p-2 text-[#1a3a6b] hover:bg-secondary"><Save className="h-4 w-4" /></button><button onClick={() => removeMember(member.id, member.profiles?.full_name ?? "this user")} disabled={busy === member.id} title="Remove user" className="rounded p-2 text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /></button></div>}</td></tr>; })}</tbody></table>}</section>
-  </div>;
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {roles.map((item) => (
+          <button key={item} type="button" onClick={() => canViewMembers && setRoleFilter(roleFilter === item ? "all" : item)} className={`rounded-lg border bg-card p-4 text-left transition-colors ${roleFilter === item ? "border-[#1a3a6b] ring-1 ring-[#1a3a6b]" : "border-border hover:border-[#1a3a6b]/40"}`}>
+            <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-bold text-[#1a3a6b]">{roleLabel[item]}</h3>{canViewMembers && <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-bold text-foreground">{roleCounts[item]}</span>}</div>
+            <p className="mt-2 text-xs leading-5 text-muted-foreground">{permissions[item].join(" · ")}</p>
+          </button>
+        ))}
+      </section>
+
+      {canManage && (
+        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+          <h3 className="flex items-center gap-2 font-semibold text-foreground"><UserPlus className="h-4 w-4 text-[#1a3a6b]" />Add an existing employee</h3>
+          <p className="mt-1 text-xs text-muted-foreground">The employee must already have an active Projectt Tracker account.</p>
+          <form onSubmit={addMember} className="mt-4 grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_auto]">
+            <label className="text-xs font-medium text-muted-foreground">Employee email<input type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="employee@example.org" className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground" /></label>
+            <label className="text-xs font-medium text-muted-foreground">Project role<select value={newRole} onChange={(event) => setNewRole(event.target.value as ProjectRole)} className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground">{roles.map((item) => <option key={item} value={item}>{roleLabel[item]}</option>)}</select></label>
+            <label className="text-xs font-medium text-muted-foreground">District scope<input value={district} onChange={(event) => setDistrict(event.target.value)} placeholder="All districts" maxLength={100} className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground" /></label>
+            <button disabled={busy === "add" || !email.trim()} className="inline-flex h-[38px] items-center justify-center gap-2 rounded-md bg-[#1a3a6b] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+              {busy === "add" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}{busy === "add" ? "Adding..." : "Grant access"}
+            </button>
+          </form>
+        </section>
+      )}
+
+      {canViewMembers && (
+        <section>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div><h3 className="flex items-center gap-2 font-semibold text-foreground"><Users className="h-4 w-4 text-[#1a3a6b]" />Project members <span className="text-sm font-normal text-muted-foreground">({filteredMembers.length})</span></h3></div>
+            <div className="relative w-full sm:w-72"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, email, district..." className="w-full rounded-md border border-border bg-card py-2 pl-9 pr-3 text-sm text-foreground" /></div>
+          </div>
+
+          {loading && members.length === 0 ? (
+            <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-10 text-sm text-muted-foreground"><LoaderCircle className="h-4 w-4 animate-spin" />Loading project members...</div>
+          ) : filteredMembers.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center"><Users className="mx-auto h-7 w-7 text-muted-foreground" /><p className="mt-3 text-sm font-medium text-foreground">{members.length === 0 ? "No project members found" : "No members match your filters"}</p><p className="mt-1 text-xs text-muted-foreground">{members.length === 0 ? "Grant access to an existing employee to build this project team." : "Try a different search or role filter."}</p>{members.length > 0 && <button type="button" onClick={() => { setSearch(""); setRoleFilter("all"); }} className="mt-3 text-xs font-semibold text-[#1a3a6b]">Clear filters</button>}</div>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {filteredMembers.map((member) => {
+                const draft = drafts[member.id] ?? getDraft(member);
+                return <MemberCard key={member.id} member={member} draft={draft} canManage={canManage} isCurrentUser={member.profiles?.id === currentUserId} busy={busy === member.id} onDraftChange={(nextDraft) => setDrafts((current) => ({ ...current, [member.id]: nextDraft }))} onReset={() => setDrafts((current) => ({ ...current, [member.id]: getDraft(member) }))} onSave={() => void saveMember(member)} onRemove={() => void removeMember(member)} />;
+              })}
+            </div>
+          )}
+        </section>
+      )}
+    </div>
+  );
 }

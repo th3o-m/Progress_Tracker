@@ -48,6 +48,7 @@ const demoMembership: ProjectMembership = {
 };
 
 interface CurrentUserResponse {
+  id: string;
   is_org_admin: boolean;
   projects: Array<Omit<ProjectMembership, "projects"> & { projects: ProjectMembership["projects"] | ProjectMembership["projects"][] | null }>;
 }
@@ -61,6 +62,7 @@ export default function App() {
   const [memberships, setMemberships] = useState<ProjectMembership[]>(supabase ? [] : [demoMembership]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(supabase ? null : demoMembership.projects.id);
   const [isOrgAdmin, setIsOrgAdmin] = useState(!supabase);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [projectsLoading, setProjectsLoading] = useState(Boolean(supabase));
   const [projectError, setProjectError] = useState<string | null>(null);
 
@@ -76,6 +78,7 @@ export default function App() {
       });
       setMemberships(activeMemberships);
       setIsOrgAdmin(currentUser.is_org_admin);
+      setCurrentUserId(currentUser.id);
       const storedProjectId = sessionStorage.getItem("selectedProjectId");
       const nextProjectId = [preferredProjectId, storedProjectId, activeMemberships[0]?.projects.id]
         .find((candidate) => candidate && activeMemberships.some((membership) => membership.projects.id === candidate)) ?? null;
@@ -85,6 +88,7 @@ export default function App() {
     } catch (error) {
       setMemberships([]);
       setSelectedProjectId(null);
+      setCurrentUserId(null);
       setProjectError(error instanceof Error ? error.message : "Unable to load projects");
     } finally {
       setProjectsLoading(false);
@@ -123,6 +127,7 @@ export default function App() {
     sessionStorage.removeItem("selectedProjectId");
     setMemberships([]);
     setSelectedProjectId(null);
+    setCurrentUserId(null);
     setPage("home");
     setAuthenticated(false);
     setSigningOut(false);
@@ -286,7 +291,7 @@ export default function App() {
           {page === "progress" && <ProgressTracking />}
           {page === "dataentry" && <DataEntry />}
           {page === "reports" && <Reports />}
-          {page === "settings" && <ProjectSettings />}
+          {page === "settings" && <ProjectSettings currentUserId={currentUserId} />}
           </ProjectDataProvider>}
         </main>
       </div>
