@@ -293,7 +293,7 @@ export default function App() {
           {page === "home" && <Overview />}
           {page === "workplan" && <WorkPlan />}
           {page === "progress" && <ProgressTracking />}
-          {page === "dataentry" && <DataEntry />}
+          {page === "dataentry" && <DataEntry memberships={memberships} />}
           {page === "import" && <ImportSpreadsheet memberships={memberships} />}
           {page === "reports" && <Reports />}
           {page === "settings" && <ProjectSettings currentUserId={currentUserId} />}
