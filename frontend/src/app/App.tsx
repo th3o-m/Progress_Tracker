@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   LayoutDashboard, ClipboardList, TrendingUp, PenLine,
-  BarChart3, Settings, Menu, X, ChevronRight, Bell, LogOut, FileSpreadsheet,
+  BarChart3, Settings, Menu, X, ChevronRight, Bell, LogOut, FileSpreadsheet, ClipboardCheck,
 } from "lucide-react";
 import { Overview } from "./components/Overview";
 import { WorkPlan } from "./components/WorkPlan";
@@ -15,8 +15,9 @@ import { ProjectSwitcher, type ProjectMembership } from "./components/ProjectSwi
 import { ProjectDataProvider } from "./ProjectDataContext";
 import { Settings as ProjectSettings } from "./components/Settings";
 import { ImportSpreadsheet } from "./components/ImportSpreadsheet";
+import { ImportedDataReview } from "./components/ImportedDataReview";
 
-type Page = "home" | "workplan" | "progress" | "dataentry" | "import" | "reports" | "settings";
+type Page = "home" | "workplan" | "progress" | "dataentry" | "import" | "review-imports" | "reports" | "settings";
 
 function hasPasswordRecoveryToken(): boolean {
   const query = new URLSearchParams(window.location.search);
@@ -30,6 +31,7 @@ const navItems: { id: Page; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "progress", label: "Progress Tracking", icon: TrendingUp },
   { id: "dataentry", label: "Data Entry", icon: PenLine },
   { id: "import", label: "Import Spreadsheet", icon: FileSpreadsheet },
+  { id: "review-imports", label: "Overview", icon: ClipboardCheck },
   { id: "reports", label: "Reports & Charts", icon: BarChart3 },
   { id: "settings", label: "Settings", icon: Settings },
 ];
@@ -40,6 +42,7 @@ const pageTitle: Record<Page, string> = {
   progress: "Progress Tracking",
   dataentry: "Data Entry",
   import: "Import Spreadsheet",
+  "review-imports": "Imported Data Review",
   reports: "Reports & Charts",
   settings: "Settings",
 };
@@ -295,6 +298,7 @@ export default function App() {
           {page === "progress" && <ProgressTracking />}
           {page === "dataentry" && <DataEntry memberships={memberships} />}
           {page === "import" && <ImportSpreadsheet memberships={memberships} />}
+          {page === "review-imports" && <ImportedDataReview />}
           {page === "reports" && <Reports />}
           {page === "settings" && <ProjectSettings currentUserId={currentUserId} />}
           </ProjectDataProvider>}

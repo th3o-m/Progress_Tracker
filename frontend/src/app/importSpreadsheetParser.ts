@@ -227,6 +227,18 @@ export function parsePercent(value: unknown): number | "" {
   return parsed <= 1 ? Math.round(parsed * 100) : Math.round(parsed);
 }
 
+function invalidDateWarning(label: string, value: unknown): string {
+  return cellText(value) && !toDate(value) ? `${label} could not be parsed as a date and was left blank.` : "";
+}
+
+function invalidNumberWarning(label: string, value: unknown): string {
+  return cellText(value) && parseMoney(value) === "" ? `${label} could not be parsed as a number and was left blank.` : "";
+}
+
+function invalidPercentWarning(label: string, value: unknown): string {
+  return cellText(value) && parsePercent(value) === "" ? `${label} could not be parsed as a percentage and was left blank.` : "";
+}
+
 function mapColorToStatus(value: unknown): ImportStatus | "" {
   const normalized = normalizeCell(value);
   if (!normalized) return "";
@@ -264,9 +276,10 @@ function findProjectStatusHeader(rows: Row[]): { rowIndex: number; map: HeaderMa
   return null;
 }
 
-function parseMilestones(rows: Row[], header: { rowIndex: number; map: HeaderMap } | null): MilestonePreview[] {
-  if (!header) return [];
+function parseMilestones(rows: Row[], header: { rowIndex: number; map: HeaderMap } | null): { rows: MilestonePreview[]; warnings: string[] } {
+  if (!header) return { rows: [], warnings: [] };
   const milestones: MilestonePreview[] = [];
+  const warnings: string[] = [];
   let carriedSummary = "";
   let blankRows = 0;
   for (let rowIndex = header.rowIndex + 1; rowIndex < rows.length; rowIndex += 1) {
@@ -282,14 +295,21 @@ function parseMilestones(rows: Row[], header: { rowIndex: number; map: HeaderMap
     if (executiveSummary) carriedSummary = executiveSummary;
     const name = getByHeader(row, header.map, "keyMilestones");
     const progressDescription = getByHeader(row, header.map, "progressAchieved");
-    const progressPercentage = parsePercent(getByHeader(row, header.map, "percentCompletion"));
+    const rawProgressPercentage = getByHeader(row, header.map, "percentCompletion");
+    const progressPercentage = parsePercent(rawProgressPercentage);
     const statusColor = getByHeader(row, header.map, "colorCode");
-    const plannedCompletionDate = toDate(getByHeader(row, header.map, "plannedCompletionDate"));
+    const rawPlannedCompletionDate = getByHeader(row, header.map, "plannedCompletionDate");
+    const plannedCompletionDate = toDate(rawPlannedCompletionDate);
     const remarks = getByHeader(row, header.map, "remarks");
     if (!name && !progressDescription && progressPercentage === "" && !remarks) continue;
-    milestones.push({ executiveSummary, name, plannedCompletionDate, progressDescription, progressPercentage, statusColor, status: mapColorToStatus(statusColor), remarks });
+    const displayIndex = milestones.length + 1;
+    const dateWarning = invalidDateWarning(`Milestone ${displayIndex} planned completion date`, rawPlannedCompletionDate);
+    const percentWarning = invalidPercentWarning(`Milestone ${displayIndex} completion percentage`, rawProgressPercentage);
+    if (dateWarning) warnings.push(dateWarning);
+    if (percentWarning) warnings.push(percentWarning);
+    milestones.push({ executiveSummary, name: name || "Imported milestone", plannedCompletionDate, progressDescription, progressPercentage, statusColor, status: mapColorToStatus(statusColor), remarks });
   }
-  return milestones;
+  return { rows: milestones, warnings };
 }
 
 function parseInlineRisks(rows: Row[], header: { rowIndex: number; map: HeaderMap } | null): RiskPreview[] {
@@ -329,12 +349,13 @@ function parseRiskTable(rows: Row[]): RiskPreview[] {
   return [];
 }
 
-function parseFinancialRows(rows: Row[]): FinancialPreview[] {
+function parseFinancialRows(rows: Row[]): { rows: FinancialPreview[]; warnings: string[] } {
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
     const row = rows[rowIndex] ?? [];
     if (!rowHasSection(row, ["item", "approvedBudget", "expenditureToDate", "balance"])) continue;
     const map = headerMap(row, ["item", "approvedBudget", "expenditureToDate", "balance", "percentUtilised"]);
     const financialRows: FinancialPreview[] = [];
+    const warnings: string[] = [];
     for (let next = rowIndex + 1; next < rows.length; next += 1) {
       const dataRow = rows[next] ?? [];
       if (rowHasAnySectionMarker(dataRow) && financialRows.length > 0) break;
@@ -343,45 +364,66 @@ function parseFinancialRows(rows: Row[]): FinancialPreview[] {
         continue;
       }
       const item = getByHeader(dataRow, map, "item");
-      const approvedBudget = parseMoney(getByHeader(dataRow, map, "approvedBudget"));
-      const expenditureToDate = parseMoney(getByHeader(dataRow, map, "expenditureToDate"));
-      const balance = parseMoney(getByHeader(dataRow, map, "balance"));
-      const percentUtilised = parsePercent(getByHeader(dataRow, map, "percentUtilised"));
+      const rawApprovedBudget = getByHeader(dataRow, map, "approvedBudget");
+      const rawExpenditureToDate = getByHeader(dataRow, map, "expenditureToDate");
+      const rawBalance = getByHeader(dataRow, map, "balance");
+      const rawPercentUtilised = getByHeader(dataRow, map, "percentUtilised");
+      const approvedBudget = parseMoney(rawApprovedBudget);
+      const expenditureToDate = parseMoney(rawExpenditureToDate);
+      const balance = parseMoney(rawBalance);
+      const percentUtilised = parsePercent(rawPercentUtilised);
       if (item || approvedBudget !== "" || expenditureToDate !== "" || balance !== "") financialRows.push({ item, approvedBudget, expenditureToDate, balance, percentUtilised });
+      const displayIndex = financialRows.length;
+      [invalidNumberWarning(`Financial row ${displayIndex} approved budget`, rawApprovedBudget), invalidNumberWarning(`Financial row ${displayIndex} expenditure to date`, rawExpenditureToDate), invalidNumberWarning(`Financial row ${displayIndex} balance`, rawBalance), invalidPercentWarning(`Financial row ${displayIndex} percent utilised`, rawPercentUtilised)]
+        .filter(Boolean)
+        .forEach((warning) => warnings.push(warning));
     }
-    return financialRows;
+    return { rows: financialRows, warnings };
   }
-  return [];
+  return { rows: [], warnings: [] };
 }
 
 export function parseRows(rows: Row[], sourceSheetName: string, sourceFileName = ""): ParsedSpreadsheetPreview {
   const statusHeader = findProjectStatusHeader(rows);
-  const milestones = parseMilestones(rows, statusHeader);
+  const parsedMilestones = parseMilestones(rows, statusHeader);
+  const milestones = parsedMilestones.rows;
   const risks = [...parseInlineRisks(rows, statusHeader), ...parseRiskTable(rows)]
     .filter((risk, index, all) => index === all.findIndex((item) => normalizeCell(item.majorRisk) === normalizeCell(risk.majorRisk) && normalizeCell(item.mitigation) === normalizeCell(risk.mitigation)));
-  const financialRows = parseFinancialRows(rows);
+  const parsedFinancialRows = parseFinancialRows(rows);
+  const financialRows = parsedFinancialRows.rows;
+  const rawPlannedStartDate = findLabelValue(rows, "plannedStartDate");
+  const rawActualStartDate = findLabelValue(rows, "actualStartDate");
+  const rawPlannedCompletionDate = findLabelValue(rows, "plannedCompletionDate");
+  const rawActualCompletionDate = findLabelValue(rows, "actualCompletionDate");
+  const rawEstimatedBudget = findLabelValue(rows, "estimatedBudget");
+  const rawAllocatedBudget = findLabelValue(rows, "allocatedBudget");
   const projectDetails: ProjectDetailsPreview = {
     projectName: cellText(findLabelValue(rows, "projectName")),
     projectOverview: cellText(findLabelValue(rows, "projectOverview")),
     projectManager: cellText(findLabelValue(rows, "projectManager")),
     projectCode: cellText(findLabelValue(rows, "projectCode")),
-    plannedStartDate: toDate(findLabelValue(rows, "plannedStartDate")),
-    actualStartDate: toDate(findLabelValue(rows, "actualStartDate")),
-    plannedCompletionDate: toDate(findLabelValue(rows, "plannedCompletionDate")),
-    actualCompletionDate: toDate(findLabelValue(rows, "actualCompletionDate")),
-    estimatedBudget: parseMoney(findLabelValue(rows, "estimatedBudget")),
-    allocatedBudget: parseMoney(findLabelValue(rows, "allocatedBudget")),
+    plannedStartDate: toDate(rawPlannedStartDate),
+    actualStartDate: toDate(rawActualStartDate),
+    plannedCompletionDate: toDate(rawPlannedCompletionDate),
+    actualCompletionDate: toDate(rawActualCompletionDate),
+    estimatedBudget: parseMoney(rawEstimatedBudget),
+    allocatedBudget: parseMoney(rawAllocatedBudget),
   };
   const warnings = [
     ...Object.entries(projectDetails).filter(([, value]) => value === "").map(([key]) => key),
+    invalidDateWarning("Planned Start Date", rawPlannedStartDate),
+    invalidDateWarning("Actual Start Date", rawActualStartDate),
+    invalidDateWarning("Planned Completion Date", rawPlannedCompletionDate),
+    invalidDateWarning("Actual Completion Date", rawActualCompletionDate),
+    invalidNumberWarning("Estimated Budget", rawEstimatedBudget),
+    invalidNumberWarning("Allocated Budget", rawAllocatedBudget),
+    ...parsedMilestones.warnings,
+    ...parsedFinancialRows.warnings,
     milestones.length === 0 ? "Milestones / progress rows" : "",
     risks.length === 0 ? "Risks / challenges" : "",
     financialRows.length === 0 ? "Financial status" : "",
   ].filter(Boolean);
-  const errors = [
-    !projectDetails.projectName ? "Project Name is required." : "",
-    milestones.length === 0 ? "At least one milestone or progress row is required." : "",
-  ].filter(Boolean);
+  const errors: string[] = [];
   return { sourceFileName, sourceSheetName, projectDetails, milestones, risks, financialRows, warnings, errors };
 }
 

@@ -8,5 +8,5 @@ export const projectsRouter = Router();
 projectsRouter.get('/', asyncHandler(listProjects));
 projectsRouter.post('/', asyncHandler(createProject));
 projectsRouter.get('/:projectId', projectAccess, asyncHandler(getProject));
-projectsRouter.patch('/:projectId', projectAccess, requireRole('admin'), asyncHandler(updateProject));
+projectsRouter.patch('/:projectId', projectAccess, requireRole('admin', 'supervisor'), asyncHandler(updateProject));
 projectsRouter.delete('/:projectId', projectAccess, requireRole('admin', 'supervisor'), asyncHandler(deleteProject));

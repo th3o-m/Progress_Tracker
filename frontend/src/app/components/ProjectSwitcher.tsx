@@ -8,6 +8,14 @@ export interface Project {
   description: string | null;
   district: string | null;
   sector: string | null;
+  project_code?: string | null;
+  project_manager?: string | null;
+  planned_start_date?: string | null;
+  actual_start_date?: string | null;
+  planned_completion_date?: string | null;
+  actual_completion_date?: string | null;
+  estimated_budget?: number | null;
+  allocated_budget?: number | null;
   status: "active" | "completed" | "on_hold" | "cancelled";
 }
 

@@ -11,33 +11,43 @@ const nullableText = z.preprocess((value) => typeof value === 'string' && value.
 const nullableTextMax = (max: number) => z.preprocess((value) => typeof value === 'string' && value.trim() === '' ? null : value, z.string().trim().min(1).max(max).nullable().optional());
 const nullableNumber = z.preprocess((value) => value === '' ? null : value, z.coerce.number().nullable().optional());
 const nullableProgress = z.preprocess((value) => value === '' ? null : value, progress.nullable().optional());
+const optionalJsonArray = z.preprocess((value) => value ?? [], z.array(z.unknown()).default([]));
+const importId = uuid.nullable().optional();
 
 const activitySchema = z.object({
   code: text.max(50), name: text.max(255), category: text.max(100), district: text.max(100),
   responsible_officer: uuid, start_date: date, end_date: date, status: text.max(50), progress_pct: progress.default(0),
+  import_id: importId, description: nullableText, status_color: nullableTextMax(50), remarks: nullableText, actual_completion_date: nullableDate,
 }).strict();
 export const createActivitySchema = activitySchema.refine((v) => v.end_date >= v.start_date, { path: ['end_date'], message: 'Must be on or after start_date' });
 export const updateActivitySchema = activitySchema.partial().refine((v) => !v.start_date || !v.end_date || v.end_date >= v.start_date, { path: ['end_date'], message: 'Must be on or after start_date' });
 
-export const createProgressSchema = z.object({ activity_id: uuid, progress_pct: progress, status: text.max(50), narrative: text, report_date: date }).strict();
+export const createProgressSchema = z.object({ activity_id: uuid, progress_pct: progress, status: text.max(50), narrative: text, report_date: date, import_id: importId, executive_summary: nullableText, status_color: nullableTextMax(50), remarks: nullableText, reporting_period: nullableTextMax(100) }).strict();
 export const updateProgressSchema = createProgressSchema.omit({ activity_id: true }).partial().refine((v) => Object.keys(v).length > 0, 'At least one field is required');
 
-export const createChallengeSchema = z.object({ activity_id: uuid, challenge_type: text.max(100), description: text, mitigation_plan: optionalText, resolved: z.boolean().default(false) }).strict();
+export const createChallengeSchema = z.object({ activity_id: uuid, challenge_type: text.max(100), description: text, mitigation_plan: optionalText, resolved: z.boolean().default(false), import_id: importId, status_color: nullableTextMax(50), responsible_officer: importId, due_date: nullableDate }).strict();
 export const updateChallengeSchema = createChallengeSchema.omit({ activity_id: true }).partial().refine((v) => Object.keys(v).length > 0, 'At least one field is required');
 
 export const createBeneficiarySchema = z.object({ full_name: text.max(255), national_id: text.max(100), beneficiary_type: text.max(100), district: text.max(100), contact_number: optionalText, notes: optionalText }).strict();
 export const updateBeneficiarySchema = createBeneficiarySchema.partial().refine((v) => Object.keys(v).length > 0, 'At least one field is required');
 
-export const createFinancialSchema = z.object({ activity_id: uuid, expense_category: text.max(100), amount: z.coerce.number().positive().multipleOf(0.01), description: text, receipt_url: z.string().url().nullable().optional() }).strict();
+export const createFinancialSchema = z.object({ activity_id: uuid, expense_category: text.max(100), amount: z.coerce.number().nonnegative().multipleOf(0.01), description: text, receipt_url: z.string().url().nullable().optional(), import_id: importId, approved_budget: nullableNumber.refine((value) => value == null || value >= 0, 'Number must be greater than or equal to 0'), balance: nullableNumber, percentage_utilised: nullableNumber, remarks: nullableText }).strict();
 export const updateFinancialSchema = createFinancialSchema.partial().refine((v) => Object.keys(v).length > 0, 'At least one field is required');
 export const decisionSchema = z.object({ reason: z.string().trim().max(1000).optional() }).strict();
 
 export const generateReportSchema = z.object({ type: z.enum(['pdf', 'excel']), start_date: date, end_date: date }).strict().refine((v) => v.end_date >= v.start_date, { path: ['end_date'], message: 'Must be on or after start_date' });
 
 export const reportImportSchema = z.object({
-  source_file_name: text.max(255),
-  source_sheet_name: text.max(255),
-  reporting_period: nullableDate,
+  source_file_name: nullableTextMax(255),
+  source_sheet_name: nullableTextMax(255),
+  reporting_period: nullableTextMax(100),
+  import_type: nullableTextMax(50).default('excel'),
+  selected_project_id: uuid.nullable().optional(),
+  selected_sheet: nullableTextMax(255),
+  imported_rows_count: z.coerce.number().int().nonnegative().default(0),
+  blocking_errors: optionalJsonArray,
+  warnings: optionalJsonArray,
+  raw_preview_json: z.record(z.unknown()).optional(),
   project_name: nullableTextMax(255),
   project_manager: nullableTextMax(255),
   start_date: nullableDate,
@@ -54,9 +64,21 @@ export const reportImportSchema = z.object({
   overwrite: z.boolean().default(false),
 }).strict().refine((v) => !v.start_date || !v.completion_date || v.completion_date >= v.start_date, { path: ['completion_date'], message: 'Must be on or after start_date' });
 
+export const updateReportImportReviewSchema = z.object({
+  review_status: z.enum(['imported', 'under_review', 'corrected', 'approved']),
+}).strict();
+
 const projectSchema = z.object({
   name: text.max(255), description: optionalText, district: optionalText, sector: optionalText,
   start_date: date.nullable().optional(), end_date: date.nullable().optional(),
+  project_code: nullableTextMax(100),
+  project_manager: nullableTextMax(255),
+  planned_start_date: nullableDate,
+  actual_start_date: nullableDate,
+  planned_completion_date: nullableDate,
+  actual_completion_date: nullableDate,
+  estimated_budget: nullableNumber.refine((value) => value == null || value >= 0, 'Number must be greater than or equal to 0'),
+  allocated_budget: nullableNumber.refine((value) => value == null || value >= 0, 'Number must be greater than or equal to 0'),
   status: z.enum(['active', 'completed', 'on_hold', 'cancelled']).default('active'),
 }).strict();
 export const createProjectSchema = projectSchema.extend({ source_project_id: uuid.optional() }).refine((v) => !v.start_date || !v.end_date || v.end_date >= v.start_date, { path: ['end_date'], message: 'Must be on or after start_date' });
