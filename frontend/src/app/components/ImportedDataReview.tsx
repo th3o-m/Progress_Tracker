@@ -18,6 +18,16 @@ type ImportedChallenge = Challenge & { import_id?: string | null; status_color?:
 type ImportedFinancial = FinancialEntry & { import_id?: string | null; approved_budget?: number | null; balance?: number | null; percentage_utilised?: number | null; remarks?: string | null };
 type ReviewPayload = { import: ImportHistory; project: ProjectRecord; activities: ImportedActivity[]; progress: ImportedProgress[]; challenges: ImportedChallenge[]; financial: ImportedFinancial[]; members: ProjectMember[] };
 
+const CURRENT_RECORDS_ID = "__current_platform_records__";
+const currentRecordsImport = (): ImportHistory => ({
+  id: CURRENT_RECORDS_ID,
+  source_file_name: null,
+  source_sheet_name: "Current platform records",
+  reporting_period: null,
+  created_at: new Date().toISOString(),
+  review_status: "under_review",
+});
+
 const inputClass = "w-full min-w-[120px] rounded border border-border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[#1a3a6b]";
 const statusOptions = ["Not Started", "In Progress", "Completed", "On Hold"];
 const colorOptions = ["", "Green", "Yellow", "Orange", "Red", "G", "Y", "O", "R"];
@@ -112,9 +122,15 @@ export function ImportedDataReview() {
 
   async function loadImports(preferredId?: string) {
     setError(null);
-    const rows = await apiRequest<ImportHistory[]>(`/projects/${projectId}/report-imports`);
-    setImports(rows);
-    const nextId = preferredId || selectedImportId || rows[0]?.id || "";
+    let rows: ImportHistory[] = [];
+    try {
+      rows = await apiRequest<ImportHistory[]>(`/projects/${projectId}/report-imports`);
+    } catch (requestError) {
+      console.warn("Import history unavailable; loading current platform records instead.", requestError);
+    }
+    const sources = [currentRecordsImport(), ...rows];
+    setImports(sources);
+    const nextId = preferredId || selectedImportId || CURRENT_RECORDS_ID;
     setSelectedImportId(nextId);
     if (nextId) await loadReview(nextId);
   }
@@ -124,14 +140,27 @@ export function ImportedDataReview() {
     setBusy("load");
     setError(null);
     try {
-      const payload = await apiRequest<ReviewPayload>(`/projects/${projectId}/report-imports/${importId}/review`);
+      const payload = importId === CURRENT_RECORDS_ID ? await loadCurrentRecordsReview() : await apiRequest<ReviewPayload>(`/projects/${projectId}/report-imports/${importId}/review`);
       setReview(payload);
       setDraft(clone(payload));
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Unable to load imported data review.");
+      setError(requestError instanceof Error ? requestError.message : "Unable to load overview records.");
     } finally {
       setBusy(null);
     }
+  }
+
+  async function loadCurrentRecordsReview(): Promise<ReviewPayload> {
+    const base = `/projects/${projectId}`;
+    const [project, activities, progress, challenges, financial, members] = await Promise.all([
+      apiRequest<ProjectRecord>(base),
+      apiRequest<ImportedActivity[]>(`${base}/activities`),
+      apiRequest<ImportedProgress[]>(`${base}/progress-updates`),
+      apiRequest<ImportedChallenge[]>(`${base}/challenges`),
+      apiRequest<ImportedFinancial[]>(`${base}/financial-entries`),
+      apiRequest<ProjectMember[]>(`${base}/members`),
+    ]);
+    return { import: currentRecordsImport(), project, activities, progress, challenges, financial, members };
   }
 
   useEffect(() => {
@@ -205,7 +234,7 @@ export function ImportedDataReview() {
         estimated_budget: draft.project.estimated_budget,
         allocated_budget: draft.project.allocated_budget,
       }) });
-      await markStatus("corrected", false);
+      if (draft.import.id !== CURRENT_RECORDS_ID) await markStatus("corrected", false);
       await refresh();
       await loadReview();
       setMessage("Project details saved.");
@@ -284,7 +313,7 @@ export function ImportedDataReview() {
           remarks: financial.remarks ?? null,
         }) });
       }
-      await markStatus("corrected", false);
+      if (draft.import.id !== CURRENT_RECORDS_ID) await markStatus("corrected", false);
       await refresh();
       await loadReview();
       setMessage("Row saved.");
@@ -296,7 +325,7 @@ export function ImportedDataReview() {
   }
 
   async function deleteRow(key: "activities" | "progress" | "challenges" | "financial", id: string) {
-    if (!window.confirm("Delete this imported row? This removes it from the real project data.")) return;
+    if (!window.confirm("Delete this row? This removes it from the real project data.")) return;
     setBusy(`${key}:${id}`);
     setError(null);
     try {
@@ -304,7 +333,7 @@ export function ImportedDataReview() {
       await apiRequest(`/projects/${projectId}/${path}/${id}`, { method: "DELETE" });
       await refresh();
       await loadReview();
-      setMessage("Imported row deleted.");
+      setMessage("Row deleted.");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to delete row.");
     } finally {
@@ -316,6 +345,7 @@ export function ImportedDataReview() {
     if (!draft?.import.id) return;
     setBusy(`add:${key}`);
     setError(null);
+    const importId = draft.import.id === CURRENT_RECORDS_ID ? null : draft.import.id;
     try {
       if (key === "activities") {
         await apiRequest(`/projects/${projectId}/activities`, { method: "POST", body: JSON.stringify({
@@ -328,25 +358,25 @@ export function ImportedDataReview() {
           end_date: draft.project.actual_completion_date || draft.project.planned_completion_date || new Date().toISOString().slice(0, 10),
           status: "Not Started",
           progress_pct: 0,
-          import_id: draft.import.id,
+          import_id: importId,
         }) });
       }
       if (key === "progress") {
         if (!firstActivity) throw new Error("Add an activity before adding progress.");
-        await apiRequest(`/projects/${projectId}/progress-updates`, { method: "POST", body: JSON.stringify({ activity_id: firstActivity, progress_pct: 0, status: "Not Started", narrative: "Imported progress update", report_date: new Date().toISOString().slice(0, 10), import_id: draft.import.id }) });
+        await apiRequest(`/projects/${projectId}/progress-updates`, { method: "POST", body: JSON.stringify({ activity_id: firstActivity, progress_pct: 0, status: "Not Started", narrative: "Imported progress update", report_date: new Date().toISOString().slice(0, 10), import_id: importId }) });
       }
       if (key === "challenges") {
         if (!firstActivity) throw new Error("Add an activity before adding risks.");
-        await apiRequest(`/projects/${projectId}/challenges`, { method: "POST", body: JSON.stringify({ activity_id: firstActivity, challenge_type: "Risk", description: "Imported risk", mitigation_plan: "", resolved: false, import_id: draft.import.id, responsible_officer: firstOfficer || null }) });
+        await apiRequest(`/projects/${projectId}/challenges`, { method: "POST", body: JSON.stringify({ activity_id: firstActivity, challenge_type: "Risk", description: "Imported risk", mitigation_plan: "", resolved: false, import_id: importId, responsible_officer: firstOfficer || null }) });
       }
       if (key === "financial") {
         if (!firstActivity) throw new Error("Add an activity before adding financial rows.");
-        await apiRequest(`/projects/${projectId}/financial-entries`, { method: "POST", body: JSON.stringify({ activity_id: firstActivity, expense_category: "Imported budget item", amount: 0, description: "Imported financial row", import_id: draft.import.id, approved_budget: 0, balance: 0, percentage_utilised: 0, remarks: "" }) });
+        await apiRequest(`/projects/${projectId}/financial-entries`, { method: "POST", body: JSON.stringify({ activity_id: firstActivity, expense_category: "Imported budget item", amount: 0, description: "Imported financial row", import_id: importId, approved_budget: 0, balance: 0, percentage_utilised: 0, remarks: "" }) });
       }
-      await markStatus("under_review", false);
+      if (draft.import.id !== CURRENT_RECORDS_ID) await markStatus("under_review", false);
       await refresh();
       await loadReview();
-      setMessage("Missing imported row added.");
+      setMessage("Row added.");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to add row.");
     } finally {
@@ -370,7 +400,7 @@ export function ImportedDataReview() {
   }
 
   async function markStatus(status: ReviewStatus, reload = true) {
-    if (!draft?.import.id) return;
+    if (!draft?.import.id || draft.import.id === CURRENT_RECORDS_ID) return;
     const next = await apiRequest<ImportHistory>(`/projects/${projectId}/report-imports/${draft.import.id}/review-status`, { method: "PATCH", body: JSON.stringify({ review_status: status }) });
     setImports((current) => current.map((item) => item.id === next.id ? { ...item, ...next } : item));
     if (reload) await loadReview(next.id);
@@ -384,15 +414,15 @@ export function ImportedDataReview() {
     { id: "financial" as const, title: "Budget / Financial Data", rows: draft?.financial.filter((row) => rowMatches("financial", row as unknown as Record<string, unknown>)) ?? [] },
   ].filter((item) => section === "all" || section === item.id);
 
-  if (!canEdit) return <div className="rounded-md border border-border bg-card p-8 text-center text-sm text-muted-foreground">Project admin or supervisor access is required to review imported data.</div>;
+  if (!canEdit) return <div className="rounded-md border border-border bg-card p-8 text-center text-sm text-muted-foreground">Project admin or supervisor access is required to edit overview records.</div>;
 
   return (
     <div className="space-y-5">
       <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="font-bold text-foreground">Imported Data Review</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Inspect imported rows, correct values in the real project tables, then approve the import.</p>
+            <h2 className="font-bold text-foreground">Overview</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Edit the live project records that feed the dashboard, activities, budget, and charts. Select an import history item only when you need to filter to one import.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => void loadReview()} disabled={!selectedImportId || busy === "load"} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-semibold hover:bg-secondary"><RefreshCw className={`h-3.5 w-3.5 ${busy === "load" ? "animate-spin" : ""}`} />Refresh</button>
@@ -404,9 +434,13 @@ export function ImportedDataReview() {
 
       <section className="grid gap-4 lg:grid-cols-[320px_1fr]">
         <aside className="space-y-4 rounded-lg border border-border bg-card p-4 shadow-sm">
-          <label className="block text-xs font-medium text-muted-foreground">Import history
+          <label className="block text-xs font-medium text-muted-foreground">Record source
             <select value={selectedImportId} onChange={(event) => { setSelectedImportId(event.target.value); void loadReview(event.target.value); }} className={`${inputClass} mt-1`}>
-              {imports.map((item) => <option key={item.id} value={item.id}>{item.reporting_period || item.source_sheet_name || item.source_file_name || item.id.slice(0, 8)} - {item.review_status}</option>)}
+              {imports.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.id === CURRENT_RECORDS_ID ? "Current platform records" : `${item.reporting_period || item.source_sheet_name || item.source_file_name || item.id.slice(0, 8)} - ${item.review_status}`}
+                </option>
+              ))}
             </select>
           </label>
           <label className="block text-xs font-medium text-muted-foreground">Section
@@ -426,13 +460,13 @@ export function ImportedDataReview() {
               <option value="clean">Rows without warnings</option>
             </select>
           </label>
-          <div className="relative"><Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search imported rows..." className="w-full rounded-md border border-border bg-background py-2 pl-8 pr-3 text-sm" /></div>
-          {draft && <div className="space-y-2 border-t border-border pt-3"><p className="text-xs font-semibold text-muted-foreground">Review status</p><div className="grid grid-cols-2 gap-2">{reviewStatuses.map((item) => <button key={item} type="button" onClick={() => void markStatus(item)} className={`rounded border px-2 py-1.5 text-xs font-semibold ${draft.import.review_status === item ? "border-[#1a3a6b] bg-[#1a3a6b] text-white" : "border-border hover:bg-secondary"}`}>{item.replace("_", " ")}</button>)}</div></div>}
+          <div className="relative"><Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search records..." className="w-full rounded-md border border-border bg-background py-2 pl-8 pr-3 text-sm" /></div>
+          {draft && draft.import.id !== CURRENT_RECORDS_ID && <div className="space-y-2 border-t border-border pt-3"><p className="text-xs font-semibold text-muted-foreground">Review status</p><div className="grid grid-cols-2 gap-2">{reviewStatuses.map((item) => <button key={item} type="button" onClick={() => void markStatus(item)} className={`rounded border px-2 py-1.5 text-xs font-semibold ${draft.import.review_status === item ? "border-[#1a3a6b] bg-[#1a3a6b] text-white" : "border-border hover:bg-secondary"}`}>{item.replace("_", " ")}</button>)}</div></div>}
         </aside>
 
         <main className="space-y-4">
-          {busy === "load" && <div className="flex items-center gap-2 rounded-md border border-border bg-card p-4 text-sm text-muted-foreground"><LoaderCircle className="h-4 w-4 animate-spin" />Loading imported records...</div>}
-          {!draft && busy !== "load" && <div className="rounded-md border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">No import history selected.</div>}
+          {busy === "load" && <div className="flex items-center gap-2 rounded-md border border-border bg-card p-4 text-sm text-muted-foreground"><LoaderCircle className="h-4 w-4 animate-spin" />Loading records...</div>}
+          {!draft && busy !== "load" && <div className="rounded-md border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">No records selected.</div>}
 
           {showProject && draft && (
             <section className="rounded-lg border border-border bg-card p-4 shadow-sm">

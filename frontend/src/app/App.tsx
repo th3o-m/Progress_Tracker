@@ -42,7 +42,7 @@ const pageTitle: Record<Page, string> = {
   progress: "Progress Tracking",
   dataentry: "Data Entry",
   import: "Import Spreadsheet",
-  "review-imports": "Imported Data Review",
+  "review-imports": "Overview",
   reports: "Reports & Charts",
   settings: "Settings",
 };
