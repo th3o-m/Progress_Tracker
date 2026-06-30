@@ -6,7 +6,19 @@ import { useProjectData, type Activity, type Challenge, type FinancialEntry, typ
 type ReviewStatus = "imported" | "under_review" | "corrected" | "approved";
 type Section = "all" | "project" | "activities" | "progress" | "challenges" | "financial";
 type WarningFilter = "all" | "warnings" | "clean";
-type ImportHistory = { id: string; source_file_name: string | null; source_sheet_name: string | null; reporting_period: string | null; created_at: string; review_status: ReviewStatus; imported_rows_count?: number };
+type RawSpreadsheetCell = string | number | boolean | null;
+type RawSpreadsheetRows = RawSpreadsheetCell[][];
+type RawPreviewJson = { rawRows?: RawSpreadsheetRows; [key: string]: unknown };
+type ImportHistory = {
+  id: string;
+  source_file_name: string | null;
+  source_sheet_name: string | null;
+  reporting_period: string | null;
+  created_at: string;
+  review_status: ReviewStatus;
+  imported_rows_count?: number;
+  raw_preview_json?: RawPreviewJson | null;
+};
 type ProjectRecord = {
   id: string; name: string; description: string | null; project_code: string | null; project_manager: string | null;
   planned_start_date: string | null; actual_start_date: string | null; planned_completion_date: string | null; actual_completion_date: string | null;
@@ -39,6 +51,42 @@ function clone<T>(value: T): T {
 
 function text(value: unknown): string {
   return String(value ?? "");
+}
+
+function spreadsheetRows(importRecord: ImportHistory | null | undefined): RawSpreadsheetRows {
+  const rows = importRecord?.raw_preview_json?.rawRows;
+  return Array.isArray(rows) ? rows.filter((row): row is RawSpreadsheetCell[] => Array.isArray(row)) : [];
+}
+
+function SpreadsheetPreview({ rows }: { rows: RawSpreadsheetRows }) {
+  const columnCount = Math.max(0, ...rows.map((row) => row.length));
+  return (
+    <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
+      <div className="mb-3">
+        <h3 className="font-semibold text-foreground">Spreadsheet Preview</h3>
+        <p className="text-xs text-muted-foreground">Original worksheet rows saved with this import.</p>
+      </div>
+      {rows.length === 0 || columnCount === 0 ? (
+        <p className="rounded border border-dashed border-border p-4 text-center text-sm text-muted-foreground">No spreadsheet preview is available for this import.</p>
+      ) : (
+        <div className="max-h-[420px] overflow-auto rounded-md border border-border">
+          <table className="min-w-max border-collapse text-left text-xs">
+            <tbody>
+              {rows.map((row, rowIndex) => (
+                <tr key={rowIndex} className={rowIndex === 0 ? "bg-secondary/70 font-semibold" : "odd:bg-background even:bg-secondary/30"}>
+                  {Array.from({ length: columnCount }).map((_, colIndex) => (
+                    <td key={colIndex} className="max-w-[280px] whitespace-pre-wrap border-b border-r border-border px-3 py-2 align-top text-foreground">
+                      {text(row[colIndex]) || <span className="text-muted-foreground"> </span>}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
 }
 
 function numberField(value: unknown): string {
@@ -407,6 +455,7 @@ export function ImportedDataReview() {
   }
 
   const showProject = draft && (section === "all" || section === "project");
+  const rawRows = spreadsheetRows(draft?.import);
   const sections = [
     { id: "activities" as const, title: "Work Plan Activities / Milestones", rows: draft?.activities.filter((row) => rowMatches("activities", row as unknown as Record<string, unknown>)) ?? [] },
     { id: "progress" as const, title: "Progress Updates", rows: draft?.progress.filter((row) => rowMatches("progress", row as unknown as Record<string, unknown>)) ?? [] },
@@ -467,6 +516,8 @@ export function ImportedDataReview() {
         <main className="space-y-4">
           {busy === "load" && <div className="flex items-center gap-2 rounded-md border border-border bg-card p-4 text-sm text-muted-foreground"><LoaderCircle className="h-4 w-4 animate-spin" />Loading records...</div>}
           {!draft && busy !== "load" && <div className="rounded-md border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">No records selected.</div>}
+
+          {draft && section === "all" && <SpreadsheetPreview rows={rawRows} />}
 
           {showProject && draft && (
             <section className="rounded-lg border border-border bg-card p-4 shadow-sm">

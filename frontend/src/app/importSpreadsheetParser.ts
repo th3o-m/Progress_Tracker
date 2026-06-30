@@ -40,6 +40,9 @@ export interface FinancialPreview {
   percentUtilised: number | "";
 }
 
+export type RawSpreadsheetCell = string | number | boolean | null;
+export type RawSpreadsheetRows = RawSpreadsheetCell[][];
+
 export interface ParsedSpreadsheetPreview {
   sourceFileName: string;
   sourceSheetName: string;
@@ -47,6 +50,7 @@ export interface ParsedSpreadsheetPreview {
   milestones: MilestonePreview[];
   risks: RiskPreview[];
   financialRows: FinancialPreview[];
+  rawRows?: RawSpreadsheetRows;
   warnings: string[];
   errors: string[];
 }
@@ -105,6 +109,13 @@ function compact(value: unknown): string {
 function cellText(value: unknown): string {
   if (value instanceof Date) return toDate(value);
   return String(value ?? "").trim();
+}
+
+function rawCell(value: unknown): RawSpreadsheetCell {
+  if (value === null || value === undefined) return null;
+  if (value instanceof Date) return toDate(value);
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
+  return String(value);
 }
 
 function isBlankRow(row: Row): boolean {
@@ -383,7 +394,7 @@ function parseFinancialRows(rows: Row[]): { rows: FinancialPreview[]; warnings: 
   return { rows: [], warnings: [] };
 }
 
-export function parseRows(rows: Row[], sourceSheetName: string, sourceFileName = ""): ParsedSpreadsheetPreview {
+export function parseRows(rows: Row[], sourceSheetName: string, sourceFileName = "", rawRows?: RawSpreadsheetRows): ParsedSpreadsheetPreview {
   const statusHeader = findProjectStatusHeader(rows);
   const parsedMilestones = parseMilestones(rows, statusHeader);
   const milestones = parsedMilestones.rows;
@@ -424,11 +435,14 @@ export function parseRows(rows: Row[], sourceSheetName: string, sourceFileName =
     financialRows.length === 0 ? "Financial status" : "",
   ].filter(Boolean);
   const errors: string[] = [];
-  return { sourceFileName, sourceSheetName, projectDetails, milestones, risks, financialRows, warnings, errors };
+  return { sourceFileName, sourceSheetName, projectDetails, milestones, risks, financialRows, rawRows, warnings, errors };
 }
 
 export function parseWorkbookSheet(workbook: XLSX.WorkBook, sheetName: string, fileName: string): ParsedSpreadsheetPreview {
   const sheet = workbook.Sheets[sheetName];
-  const rows = XLSX.utils.sheet_to_json<Row>(sheet, { header: 1, defval: "", raw: false });
-  return parseRows(rows, sheetName, fileName);
+  const rawRows = XLSX.utils
+    .sheet_to_json<Row>(sheet, { header: 1, defval: "", blankrows: false })
+    .map((row) => row.map(rawCell));
+  const rows = XLSX.utils.sheet_to_json<Row>(sheet, { header: 1, defval: "", raw: false, blankrows: false });
+  return parseRows(rows, sheetName, fileName, rawRows);
 }
