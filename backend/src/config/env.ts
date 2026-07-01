@@ -8,6 +8,9 @@ const schema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(20),
   REPORT_URL_TTL_SECONDS: z.coerce.number().int().positive().default(3600),
+  RESEND_API_KEY: z.string().min(1).optional(),
+  EMAIL_FROM: z.string().min(1).default('Project Tracker <noreply@example.com>'),
+  CRON_SECRET: z.string().min(16).optional(),
 });
 
 const result = schema.safeParse(process.env);
@@ -17,4 +20,3 @@ if (!result.success) {
 }
 
 export const env = result.data;
-

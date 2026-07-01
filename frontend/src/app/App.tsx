@@ -25,6 +25,10 @@ function hasPasswordRecoveryToken(): boolean {
   return query.get("type") === "recovery" || hash.get("type") === "recovery";
 }
 
+function projectIdFromUrl(): string | null {
+  return new URLSearchParams(window.location.search).get("project");
+}
+
 const navItems: { id: Page; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "home", label: "Home", icon: LayoutDashboard },
   { id: "workplan", label: "Work Plan & Activities", icon: ClipboardList },
@@ -85,8 +89,9 @@ export default function App() {
       setMemberships(activeMemberships);
       setIsOrgAdmin(currentUser.is_org_admin);
       setCurrentUserId(currentUser.id);
+      const requestedProjectId = projectIdFromUrl();
       const storedProjectId = sessionStorage.getItem("selectedProjectId");
-      const nextProjectId = [preferredProjectId, storedProjectId, activeMemberships[0]?.projects.id]
+      const nextProjectId = [preferredProjectId, requestedProjectId, storedProjectId, activeMemberships[0]?.projects.id]
         .find((candidate) => candidate && activeMemberships.some((membership) => membership.projects.id === candidate)) ?? null;
       setSelectedProjectId(nextProjectId);
       if (nextProjectId) sessionStorage.setItem("selectedProjectId", nextProjectId);

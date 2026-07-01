@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   Check,
   LoaderCircle,
+  MailWarning,
   RefreshCw,
   Save,
   Search,
@@ -151,6 +152,7 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | ProjectRole>("all");
   const [busy, setBusy] = useState<string | null>(null);
+  const [remindersBusy, setRemindersBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -252,6 +254,21 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
     finally { setBusy(null); }
   }
 
+  async function sendOverdueReminders() {
+    if (remindersBusy) return;
+    setRemindersBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await apiRequest<{ considered: number; sent: number; skipped: number; failed: number }>(`/projects/${projectId}/notifications/overdue-tasks/run`, { method: "POST" });
+      setMessage(`Overdue reminder check complete. Considered ${result.considered}, sent ${result.sent}, skipped ${result.skipped}, failed ${result.failed}.`);
+    } catch (requestError) {
+      showError(requestError, "Unable to send overdue reminders");
+    } finally {
+      setRemindersBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="rounded-lg border border-border bg-card p-5 shadow-sm sm:p-6">
@@ -283,6 +300,21 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
           </button>
         ))}
       </section>
+
+      {canManage && (
+        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 className="flex items-center gap-2 font-semibold text-foreground"><MailWarning className="h-4 w-4 text-[#1a3a6b]" />Overdue reminders</h3>
+              <p className="mt-1 text-xs text-muted-foreground">Run the daily overdue task email check now.</p>
+            </div>
+            <button type="button" onClick={sendOverdueReminders} disabled={remindersBusy} className="inline-flex items-center gap-2 rounded-md bg-[#1a3a6b] px-4 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60">
+              {remindersBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <MailWarning className="h-4 w-4" />}
+              Send overdue reminders now
+            </button>
+          </div>
+        </section>
+      )}
 
       {canManage && (
         <section className="rounded-lg border border-border bg-card p-5 shadow-sm">

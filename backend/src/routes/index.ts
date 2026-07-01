@@ -8,6 +8,7 @@ import { progressRouter } from './progress.routes.js';
 import { projectsRouter } from './projects.routes.js';
 import { reportsRouter } from './reports.routes.js';
 import { reportImportsRouter } from './reportImports.routes.js';
+import { notificationsRouter } from './notifications.routes.js';
 import { projectAccess } from '../middleware/projectAccess.js';
 
 export const apiRouter = Router();
@@ -21,3 +22,4 @@ apiRouter.use('/projects/:projectId/beneficiaries', projectAccess, beneficiaries
 apiRouter.use('/projects/:projectId/financial-entries', projectAccess, financialRouter);
 apiRouter.use('/projects/:projectId/reports', projectAccess, reportsRouter);
 apiRouter.use('/projects/:projectId/report-imports', projectAccess, reportImportsRouter);
+apiRouter.use('/projects/:projectId/notifications', projectAccess, notificationsRouter);

@@ -10,5 +10,11 @@
       "routePrefix": "/_/backend",
       "entrypoint": "src/server.ts"
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/_/backend/api/notifications/overdue-tasks/run",
+      "schedule": "0 6 * * *"
+    }
+  ]
 }
