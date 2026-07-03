@@ -257,35 +257,45 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
     setPreview((current) => current ? { ...current, financialRows: [...current.financialRows, { item: "", approvedBudget: "", expenditureToDate: "", balance: "", percentUtilised: "" }] } : current);
   }
 
-  async function saveReportSnapshot(nextPreview: ParsedSpreadsheetPreview): Promise<ReportImportRecord> {
+  async function saveReportSnapshot(nextPreview: ParsedSpreadsheetPreview): Promise<ReportImportRecord | null> {
     const reportDuplicate = duplicates.some((item) => item.type === "report");
     if (reportDuplicate && duplicateMode !== "update") {
       const existingId = duplicates.find((item) => item.type === "report")?.id;
       if (existingId) return { id: existingId };
-      throw new Error("Import history duplicate was detected, but the existing import could not be identified.");
+      console.warn("Import history duplicate was detected, but the existing import could not be identified. Continuing without import history.");
+      return null;
     }
-    return apiRequest<ReportImportRecord>(`/projects/${selectedProjectId}/report-imports`, {
-      method: "POST",
-      body: JSON.stringify({
-        source_file_name: nullable(nextPreview.sourceFileName),
-        source_sheet_name: nullable(nextPreview.sourceSheetName),
-        reporting_period: nullable(nextPreview.projectDetails.actualCompletionDate || nextPreview.projectDetails.plannedCompletionDate),
-        import_type: "excel",
-        selected_project_id: selectedProjectId,
-        selected_sheet: nullable(nextPreview.sourceSheetName),
-        imported_rows_count: nextPreview.milestones.length + nextPreview.risks.length + nextPreview.financialRows.length,
-        blocking_errors: blockingErrors(),
-        warnings: warnings(),
-        raw_preview_json: {
-          projectDetails: nextPreview.projectDetails,
-          milestones: nextPreview.milestones,
-          risks: nextPreview.risks,
-          financialRows: nextPreview.financialRows,
-          rawRows: nextPreview.rawRows ?? [],
-        },
-        overwrite: duplicateMode === "update",
-      }),
-    });
+    const previewData = {
+      projectDetails: nextPreview.projectDetails,
+      milestones: nextPreview.milestones,
+      risks: nextPreview.risks,
+      financialRows: nextPreview.financialRows,
+    };
+    try {
+      return await apiRequest<ReportImportRecord>(`/projects/${selectedProjectId}/report-imports`, {
+        method: "POST",
+        body: JSON.stringify({
+          source_file_name: nullable(nextPreview.sourceFileName),
+          source_sheet_name: nullable(nextPreview.sourceSheetName),
+          reporting_period: nullable(nextPreview.projectDetails.actualCompletionDate || nextPreview.projectDetails.plannedCompletionDate),
+          import_type: "excel",
+          selected_project_id: selectedProjectId,
+          selected_sheet: nullable(nextPreview.sourceSheetName),
+          file_name: nullable(nextPreview.sourceFileName),
+          imported_rows_count: nextPreview.milestones.length + nextPreview.risks.length + nextPreview.financialRows.length,
+          import_status: "completed",
+          blocking_errors: blockingErrors(),
+          warnings: warnings(),
+          preview_data: previewData,
+          raw_data: { rawRows: nextPreview.rawRows ?? [] },
+          raw_preview_json: { ...previewData, rawRows: nextPreview.rawRows ?? [] },
+          overwrite: duplicateMode === "update",
+        }),
+      });
+    } catch (requestError) {
+      console.warn("Import history save failed; continuing with spreadsheet import.", requestError);
+      return null;
+    }
   }
 
   async function updateSelectedProjectDetails(nextPreview: ParsedSpreadsheetPreview): Promise<boolean> {
@@ -390,7 +400,7 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
     setMessage(null);
     try {
       const importRecord = await saveReportSnapshot(preview);
-      const importId = importRecord.id;
+      const importId = importRecord?.id ?? null;
       const projectUpdated = await updateSelectedProjectDetails(preview);
       const activityMap = new Map<string, Activity>();
       for (const [index, milestone] of preview.milestones.entries()) {
@@ -427,7 +437,7 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
         for (const row of preview.financialRows) await saveFinancialRow(row, fallbackActivity, importId);
       }
       if (selectedProjectId === projectId) await refresh();
-      setMessage(`Imported available data from ${preview.sourceSheetName}. Project tables were refreshed through the same APIs used by the app pages.${projectUpdated ? "" : " Project detail update failed, but row data was kept."} Use Imported Data Review to inspect and correct this import.`);
+      setMessage(`Imported available data from ${preview.sourceSheetName}. Project tables were refreshed through the same APIs used by the app pages.${projectUpdated ? "" : " Project detail update failed, but row data was kept."}${importId ? " Use Imported Data Review to inspect and correct this import." : " Import history logging failed, but the spreadsheet data was still saved."}`);
       setDuplicates([]);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to save imported data.");

@@ -16,8 +16,11 @@ import { ProjectDataProvider } from "./ProjectDataContext";
 import { Settings as ProjectSettings } from "./components/Settings";
 import { ImportSpreadsheet } from "./components/ImportSpreadsheet";
 import { ImportedDataReview } from "./components/ImportedDataReview";
+import { ThemeToggle } from "./components/ThemeToggle";
+import { Challenges } from "./components/Challenges";
 
-type Page = "home" | "workplan" | "progress" | "dataentry" | "import" | "review-imports" | "reports" | "settings";
+type Page = "home" | "workplan" | "progress" | "challenges" | "dataentry" | "import" | "review-imports" | "reports" | "settings";
+type Theme = "light" | "dark";
 
 function hasPasswordRecoveryToken(): boolean {
   const query = new URLSearchParams(window.location.search);
@@ -27,6 +30,12 @@ function hasPasswordRecoveryToken(): boolean {
 
 function projectIdFromUrl(): string | null {
   return new URLSearchParams(window.location.search).get("project");
+}
+
+function getInitialTheme(): Theme {
+  const storedTheme = localStorage.getItem("theme");
+  if (storedTheme === "light" || storedTheme === "dark") return storedTheme;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 const navItems: { id: Page; label: string; icon: typeof LayoutDashboard }[] = [
@@ -44,6 +53,7 @@ const pageTitle: Record<Page, string> = {
   home: "Dashboard Overview",
   workplan: "Work Plan & Activities",
   progress: "Progress Tracking",
+  challenges: "Current Challenges",
   dataentry: "Data Entry",
   import: "Import Spreadsheet",
   "review-imports": "Overview",
@@ -64,6 +74,7 @@ interface CurrentUserResponse {
 }
 
 export default function App() {
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [page, setPage] = useState<Page>("home");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [authenticated, setAuthenticated] = useState<boolean | null>(supabase ? null : true);
@@ -75,6 +86,16 @@ export default function App() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [projectsLoading, setProjectsLoading] = useState(Boolean(supabase));
   const [projectError, setProjectError] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    document.documentElement.style.colorScheme = theme;
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  function toggleTheme() {
+    setTheme((current) => current === "dark" ? "light" : "dark");
+  }
 
   const loadProjects = useCallback(async (preferredProjectId?: string) => {
     if (!supabase) return;
@@ -151,6 +172,8 @@ export default function App() {
   if (!authenticated) {
     return (
       <Login
+        theme={theme}
+        onToggleTheme={toggleTheme}
         passwordRecovery={passwordRecovery}
         onSignedIn={() => setAuthenticated(true)}
         onPasswordReset={() => {
@@ -285,6 +308,7 @@ export default function App() {
               <Bell className="w-4 h-4 text-muted-foreground" />
               <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
             </button>
+            <ThemeToggle theme={theme} onToggle={toggleTheme} showLabel />
           </div>
         </header>
 
@@ -298,9 +322,10 @@ export default function App() {
             </div>
           )}
           {selectedMembership && <ProjectDataProvider projectId={selectedMembership.projects.id} role={selectedMembership.role}>
-          {page === "home" && <Overview />}
+          {page === "home" && <Overview onViewChallenges={() => setPage("challenges")} />}
           {page === "workplan" && <WorkPlan />}
           {page === "progress" && <ProgressTracking />}
+          {page === "challenges" && <Challenges />}
           {page === "dataentry" && <DataEntry memberships={memberships} />}
           {page === "import" && <ImportSpreadsheet memberships={memberships} />}
           {page === "review-imports" && <ImportedDataReview />}

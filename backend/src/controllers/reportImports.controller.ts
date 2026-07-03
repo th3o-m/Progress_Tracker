@@ -22,11 +22,22 @@ export async function createReportImport(req: Request, res: Response): Promise<v
   const body = parseBody(reportImportSchema, req.body);
   const { overwrite, ...input } = body;
   const payload = {
-    ...input,
     project_id: req.context.projectId,
     selected_project_id: req.context.projectId,
     imported_by: req.user.id,
-    milestones: Array.isArray(input.milestones) ? input.milestones : [input.milestones],
+    source_file_name: input.source_file_name,
+    source_sheet_name: input.source_sheet_name,
+    reporting_period: input.reporting_period,
+    import_type: input.import_type,
+    selected_sheet: input.selected_sheet,
+    file_name: input.file_name,
+    imported_rows_count: input.imported_rows_count,
+    import_status: input.import_status,
+    blocking_errors: input.blocking_errors,
+    warnings: input.warnings,
+    preview_data: input.preview_data,
+    raw_data: input.raw_data,
+    raw_preview_json: input.raw_preview_json,
   };
 
   const { data: existing, error: lookupError } = input.reporting_period

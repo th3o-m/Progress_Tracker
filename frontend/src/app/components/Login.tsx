@@ -1,16 +1,19 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { CheckCircle2, Eye, EyeOff, KeyRound, LogIn, Mail, UserPlus } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface LoginProps {
   onSignedIn: () => void;
   passwordRecovery?: boolean;
   onPasswordReset?: () => void;
+  theme: "light" | "dark";
+  onToggleTheme: () => void;
 }
 
 type Mode = "login" | "signup" | "forgot" | "reset";
 
-export function Login({ onSignedIn, passwordRecovery = false, onPasswordReset }: LoginProps) {
+export function Login({ onSignedIn, passwordRecovery = false, onPasswordReset, theme, onToggleTheme }: LoginProps) {
   const [mode, setMode] = useState<Mode>(passwordRecovery ? "reset" : "login");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -138,14 +141,15 @@ export function Login({ onSignedIn, passwordRecovery = false, onPasswordReset }:
   return (
     <main className="min-h-screen bg-background flex items-center justify-center p-6">
       <section className="w-full max-w-md bg-card border border-border rounded-lg shadow-sm p-8">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-md flex items-center justify-center bg-[#1a3a6b]">
-            <span className="text-white text-sm font-extrabold">PT</span>
+        <div className="mb-6 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary">
+            <span className="text-sm font-extrabold text-primary-foreground">PT</span>
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <h1 className="text-foreground font-bold">Projectt Tracker</h1>
             <p className="text-muted-foreground text-xs">Organization-wide employee access</p>
           </div>
+          <ThemeToggle theme={theme} onToggle={onToggleTheme} />
         </div>
 
         {isSupabaseConfigured ? (
