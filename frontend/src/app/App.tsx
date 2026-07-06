@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   LayoutDashboard, ClipboardList, TrendingUp, PenLine,
-  BarChart3, Settings, Menu, X, ChevronRight, Bell, LogOut, FileSpreadsheet, ClipboardCheck,
+  BarChart3, Settings, Menu, X, ChevronRight, Bell, LogOut, FileSpreadsheet, ClipboardCheck, MonitorPlay,
 } from "lucide-react";
 import { Overview } from "./components/Overview";
 import { WorkPlan } from "./components/WorkPlan";
@@ -18,6 +18,7 @@ import { ImportSpreadsheet } from "./components/ImportSpreadsheet";
 import { ImportedDataReview } from "./components/ImportedDataReview";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { Challenges } from "./components/Challenges";
+import { ProjectPresentation } from "./pages/ProjectPresentation";
 
 type Page = "home" | "workplan" | "progress" | "challenges" | "dataentry" | "import" | "review-imports" | "reports" | "settings";
 type Theme = "light" | "dark";
@@ -30,6 +31,11 @@ function hasPasswordRecoveryToken(): boolean {
 
 function projectIdFromUrl(): string | null {
   return new URLSearchParams(window.location.search).get("project");
+}
+
+function presentationProjectIdFromPath(): string | null {
+  const match = window.location.pathname.match(/^\/projects\/([^/]+)\/presentation\/?$/);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
 function getInitialTheme(): Theme {
@@ -74,6 +80,7 @@ interface CurrentUserResponse {
 }
 
 export default function App() {
+  const presentationProjectId = presentationProjectIdFromPath();
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [page, setPage] = useState<Page>("home");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -182,6 +189,10 @@ export default function App() {
         }}
       />
     );
+  }
+
+  if (presentationProjectId) {
+    return <ProjectPresentation projectId={presentationProjectId} />;
   }
 
   const selectedMembership = memberships.find((membership) => membership.projects.id === selectedProjectId);
@@ -308,6 +319,16 @@ export default function App() {
               <Bell className="w-4 h-4 text-muted-foreground" />
               <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
             </button>
+            {selectedMembership && (
+              <button
+                type="button"
+                onClick={() => { window.location.href = `/projects/${selectedMembership.projects.id}/presentation`; }}
+                className="inline-flex items-center gap-2 rounded-md border border-border bg-secondary px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-accent"
+              >
+                <MonitorPlay className="h-4 w-4" />
+                Presentation Mode
+              </button>
+            )}
             <ThemeToggle theme={theme} onToggle={toggleTheme} showLabel />
           </div>
         </header>

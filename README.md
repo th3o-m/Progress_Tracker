@@ -1,158 +1,262 @@
-# Projectt Tracker
+# Progress Tracker
 
-Projectt Tracker is a multi-project monitoring and evaluation system for tracking activities, progress, beneficiaries, challenges, financial entries, spreadsheet imports, and generated reports.
+A full-stack **Project Monitoring and Evaluation Platform** designed to help teams manage projects, track implementation progress, monitor activities, record challenges, manage beneficiaries, review financial data, import spreadsheet records, generate reports, and present project insights through a professional **Presentation Mode**.
 
-The system is built for organizations that manage several projects at once. A user has one Supabase Auth account, but their role and district scope can be different in each project. The application uses those project memberships to decide what each user can see and do.
+The platform is built for organizations that need a structured way to monitor multiple projects, improve reporting accuracy, and present progress updates clearly during meetings, reviews, and online presentations.
 
-## How the System Works
+---
 
-Users sign in through Supabase Auth. After sign-in, the frontend calls the API to load the user's profile and project memberships. The user then selects an active project from the sidebar. All dashboard data, forms, imports, reports, and settings are scoped to that selected project.
+## Table of Contents
 
-Project data is organized around these areas:
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [New Feature: Project Presentation Mode](#new-feature-project-presentation-mode)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Core Modules](#core-modules)
+- [Installation](#installation)
+- [Environment Variables](#environment-variables)
+- [Running the Application](#running-the-application)
+- [Database and Supabase](#database-and-supabase)
+- [Authentication and Authorization](#authentication-and-authorization)
+- [API Overview](#api-overview)
+- [Spreadsheet Import Workflow](#spreadsheet-import-workflow)
+- [Reports and Exports](#reports-and-exports)
+- [Notifications](#notifications)
+- [Deployment](#deployment)
+- [Testing Checklist](#testing-checklist)
+- [Future Improvements](#future-improvements)
+- [Author](#author)
 
-- **Dashboard Overview** shows project-level metrics and summaries.
-- **Work Plan & Activities** manages project activities, responsible officers, status, dates, and progress.
-- **Progress Tracking** records progress updates against activities.
-- **Data Entry** captures activities, progress updates, challenges, beneficiaries, and financial entries.
-- **Import Spreadsheet** imports structured project data from spreadsheet files.
-- **Reports & Charts** generates project reports and visual summaries.
-- **Settings** manages project details and membership where the user's role allows it.
+---
 
-The API enforces authorization on every request. A user must be an active employee, must belong to the selected project, and must have the required project role for the action. If a user is not a member of a project, project-scoped routes return `404` so the API does not reveal whether that project exists.
+## Overview
 
-## Roles and Access
+**Progress Tracker** is a modern web-based platform for managing and monitoring project implementation. It helps teams move away from scattered spreadsheets, manual reporting, and disconnected project records by providing one centralized system for project data.
 
-Roles are assigned per project through `project_members`.
+The system allows users to:
 
-- **admin** can manage project data, project settings, and members.
-- **supervisor** can manage activities, project data, imports, and reports.
-- **officer** can update assigned work and enter project records within their allowed scope.
-- **finance** can manage and review financial entries.
+- Create and manage projects.
+- Track project activities and progress.
+- Record updates, challenges, beneficiaries, and financial entries.
+- Import structured data from spreadsheets.
+- Review and edit imported records.
+- Generate project reports.
+- Receive overdue task notifications.
+- Present project performance through a full-screen presentation view.
 
-Organization administrators can create users and projects. They still need a project membership to work inside a specific project.
+The platform is especially useful for project officers, supervisors, finance teams, administrators, and organizations that need regular progress reporting.
 
-## Architecture
+---
 
-The repository contains two applications:
+## Key Features
 
-- `frontend/` - React and Vite single-page application.
-- `backend/` - Node.js, TypeScript, Express, and Supabase API.
+### 1. Multi-Project Management
 
-Supabase provides:
+Users can manage multiple projects from a single platform.
 
-- Authentication.
-- PostgreSQL database.
-- Row-level security policies.
-- Storage for generated report files.
+Features include:
 
-The frontend uses the public Supabase anon key for browser authentication. The backend uses the Supabase service-role key for trusted server-side database operations. The service-role key must stay only in backend environment variables.
+- Project creation and selection.
+- Project-specific dashboards.
+- Project member management.
+- Role-based access per project.
+- Project switching.
+- Project overview and performance tracking.
 
-## Main Data Flow
+---
 
-1. A user signs in with Supabase Auth.
-2. The frontend sends the Supabase access token to the backend as a Bearer token.
-3. The backend validates the token and loads the user's active profile.
-4. The frontend loads the user's available projects from `GET /api/users/me`.
-5. The user selects a project.
-6. All project data requests use routes under `/api/projects/:projectId/...`.
-7. The backend checks project membership, role, ownership, and district rules before reading or writing data.
-8. Reports are generated by the backend and stored in Supabase Storage with project-scoped paths.
+### 2. Dashboard Overview
 
-## API Areas
+The dashboard gives users a quick view of project performance.
 
-All API routes except `/health` require authentication.
+It includes:
 
-- `/api/users` - current user, employee, and organization-admin operations.
-- `/api/projects` - project listing and project management.
-- `/api/projects/:projectId/members` - project membership management.
-- `/api/projects/:projectId/activities` - activities and work plan data.
-- `/api/projects/:projectId/progress-updates` - progress records.
-- `/api/projects/:projectId/challenges` - project challenges.
-- `/api/projects/:projectId/beneficiaries` - beneficiary records.
-- `/api/projects/:projectId/financial-entries` - financial entries and review actions.
-- `/api/projects/:projectId/reports` - generated project reports.
-- `/api/projects/:projectId/report-imports` - spreadsheet import logging and processing.
+- Project summary cards.
+- Activity progress indicators.
+- Recent updates.
+- Challenge summaries.
+- Beneficiary statistics.
+- Financial highlights.
+- Project status overview.
 
-## Local Setup
+---
 
-Requirements:
+### 3. Work Plan and Activity Tracking
 
-- Node.js 20 or newer.
-- npm.
-- A Supabase project.
-- Supabase CLI or access to the Supabase SQL editor.
+The platform supports structured activity tracking for each project.
 
-Create `backend/.env`:
+Users can record:
 
-```env
-PORT=3000
-NODE_ENV=development
-FRONTEND_URL=http://localhost:5173
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-REPORT_URL_TTL_SECONDS=3600
-```
+- Activity names.
+- Start and end dates.
+- Progress percentage.
+- Status.
+- Responsible officers.
+- Related updates.
+- Delays and pending work.
 
-Create `frontend/.env`:
+This helps teams understand which activities are completed, ongoing, delayed, or not yet started.
 
-```env
-VITE_API_URL=http://localhost:3000/api
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-public-anon-key
-```
+---
 
-Apply the database migrations in `backend/supabase/migrations` in order. With the Supabase CLI:
+### 4. Progress Updates
 
-```bash
-cd backend
-supabase login
-supabase link --project-ref YOUR_PROJECT_REF
-supabase db push
-```
+Users can submit regular project progress updates.
 
-Start the backend:
+Progress updates help capture:
 
-```bash
-cd backend
-npm install
-npm run dev
-```
+- What has been achieved.
+- Current implementation status.
+- Field updates.
+- Progress percentage.
+- Supporting comments.
+- Recent developments.
 
-Start the frontend in another terminal:
+These updates are used in dashboards, reports, and the new presentation mode.
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+---
 
-The frontend runs on Vite's local development URL, usually `http://localhost:5173`. The backend health check is available at `http://localhost:3000/health`.
+### 5. Challenges and Mitigation Tracking
 
-## Production
+The platform allows teams to record project challenges and mitigation measures.
 
-The app is configured for Vercel using `vercel.json`.
+Users can track:
 
-The frontend is served from `frontend/`. The backend is served under `/_/backend`, and production frontend requests should use:
+- Challenge title.
+- Description.
+- Status.
+- Mitigation actions.
+- Responsible persons.
+- Resolution progress.
 
-```env
-VITE_API_URL=/_/backend/api
-```
+This improves accountability and helps management understand what is blocking implementation.
 
-Set all frontend and backend environment variables in the hosting environment before deploying. Never expose `SUPABASE_SERVICE_ROLE_KEY` to the frontend.
+---
 
-## Build Checks
+### 6. Beneficiary Management
 
-Backend:
+The system supports beneficiary tracking for project impact reporting.
 
-```bash
-cd backend
-npm run typecheck
-npm run build
-```
+Users can capture:
 
-Frontend:
+- Beneficiary records.
+- Beneficiary categories or types.
+- Totals by group.
+- Project-level beneficiary summaries.
 
-```bash
-cd frontend
-npm run build
-```
+This is useful for impact reports, donor reporting, government reporting, and executive presentations.
+
+---
+
+### 7. Financial Tracking
+
+The platform includes financial tracking functionality for project monitoring.
+
+It can support:
+
+- Budget records.
+- Financial entries.
+- Approved amounts.
+- Pending amounts.
+- Rejected amounts.
+- Spending summaries.
+- Financial visibility based on user roles.
+
+This helps teams connect financial performance with implementation progress.
+
+---
+
+### 8. Spreadsheet Import System
+
+The platform includes a spreadsheet import feature to reduce manual data entry.
+
+Supported functionality includes:
+
+- Uploading spreadsheet files.
+- Reading spreadsheet data.
+- Mapping imported columns to system fields.
+- Previewing imported data before saving.
+- Editing imported records.
+- Handling duplicate records.
+- Import history tracking.
+- Reviewing imported records in an editable overview area.
+
+This feature is useful when project data already exists in Excel files and needs to be moved into the system.
+
+---
+
+### 9. Editable Imported Data Review
+
+After importing spreadsheet data, users can review and correct records inside the platform.
+
+This helps ensure:
+
+- Imported values are accurate.
+- Data errors are corrected before reporting.
+- Project records remain clean and reliable.
+- Users do not have to return to Excel for every correction.
+
+---
+
+### 10. Reports and Exports
+
+The platform supports report generation and export functionality.
+
+Reports may include:
+
+- Project summaries.
+- Progress reports.
+- Financial summaries.
+- Activity reports.
+- Imported data summaries.
+- Downloadable report outputs.
+
+The backend includes report-generation support for structured project reporting.
+
+---
+
+### 11. Email Notifications
+
+The platform includes an overdue task notification system.
+
+This allows the system to remind users about:
+
+- Overdue activities.
+- Delayed tasks.
+- Pending project responsibilities.
+
+The notification system is designed to improve follow-up and reduce missed deadlines.
+
+---
+
+### 12. Role-Based Access Control
+
+The platform supports project-level access control.
+
+Different users can have different permissions depending on their role, such as:
+
+- Administrator
+- Supervisor
+- Project officer
+- Finance user
+- Viewer or limited-access user
+
+This ensures that users only access the project information they are allowed to see.
+
+---
+
+## New Feature: Project Presentation Mode
+
+The latest major feature is **Project Presentation Mode**.
+
+This feature was designed because the platform is intended to be used during online meetings, reporting sessions, and executive project presentations.
+
+Instead of manually preparing slides from project data, users can open a clean full-screen presentation view generated from live project records.
+
+---
+
+### Presentation Mode Route
+
+```txt
+/projects/:projectId/presentation
