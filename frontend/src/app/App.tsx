@@ -1,24 +1,25 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import {
   LayoutDashboard, ClipboardList, TrendingUp, PenLine,
   BarChart3, Settings, Menu, X, ChevronRight, Bell, LogOut, FileSpreadsheet, ClipboardCheck, MonitorPlay,
 } from "lucide-react";
 import { Overview } from "./components/Overview";
-import { WorkPlan } from "./components/WorkPlan";
-import { ProgressTracking } from "./components/ProgressTracking";
-import { DataEntry } from "./components/DataEntry";
-import { Reports } from "./components/Reports";
 import { Login } from "./components/Login";
 import { supabase } from "../lib/supabase";
 import { apiRequest } from "../lib/api";
 import { ProjectSwitcher, type ProjectMembership } from "./components/ProjectSwitcher";
 import { ProjectDataProvider } from "./ProjectDataContext";
-import { Settings as ProjectSettings } from "./components/Settings";
-import { ImportSpreadsheet } from "./components/ImportSpreadsheet";
-import { ImportedDataReview } from "./components/ImportedDataReview";
 import { ThemeToggle } from "./components/ThemeToggle";
-import { Challenges } from "./components/Challenges";
-import { ProjectPresentation } from "./pages/ProjectPresentation";
+
+const WorkPlan = lazy(() => import("./components/WorkPlan").then((module) => ({ default: module.WorkPlan })));
+const ProgressTracking = lazy(() => import("./components/ProgressTracking").then((module) => ({ default: module.ProgressTracking })));
+const Challenges = lazy(() => import("./components/Challenges").then((module) => ({ default: module.Challenges })));
+const DataEntry = lazy(() => import("./components/DataEntry").then((module) => ({ default: module.DataEntry })));
+const ImportSpreadsheet = lazy(() => import("./components/ImportSpreadsheet").then((module) => ({ default: module.ImportSpreadsheet })));
+const ImportedDataReview = lazy(() => import("./components/ImportedDataReview").then((module) => ({ default: module.ImportedDataReview })));
+const Reports = lazy(() => import("./components/Reports").then((module) => ({ default: module.Reports })));
+const ProjectSettings = lazy(() => import("./components/Settings").then((module) => ({ default: module.Settings })));
+const ProjectPresentation = lazy(() => import("./pages/ProjectPresentation").then((module) => ({ default: module.ProjectPresentation })));
 
 type Page = "home" | "workplan" | "progress" | "challenges" | "dataentry" | "import" | "review-imports" | "reports" | "settings";
 type Theme = "light" | "dark";
@@ -42,6 +43,10 @@ function getInitialTheme(): Theme {
   const storedTheme = localStorage.getItem("theme");
   if (storedTheme === "light" || storedTheme === "dark") return storedTheme;
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function PageLoadingFallback() {
+  return <div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Loading page...</div>;
 }
 
 const navItems: { id: Page; label: string; icon: typeof LayoutDashboard }[] = [
@@ -192,7 +197,11 @@ export default function App() {
   }
 
   if (presentationProjectId) {
-    return <ProjectPresentation projectId={presentationProjectId} />;
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground">Loading page...</div>}>
+        <ProjectPresentation projectId={presentationProjectId} />
+      </Suspense>
+    );
   }
 
   const selectedMembership = memberships.find((membership) => membership.projects.id === selectedProjectId);
@@ -343,15 +352,17 @@ export default function App() {
             </div>
           )}
           {selectedMembership && <ProjectDataProvider projectId={selectedMembership.projects.id} role={selectedMembership.role}>
-          {page === "home" && <Overview onViewChallenges={() => setPage("challenges")} />}
-          {page === "workplan" && <WorkPlan />}
-          {page === "progress" && <ProgressTracking />}
-          {page === "challenges" && <Challenges />}
-          {page === "dataentry" && <DataEntry memberships={memberships} />}
-          {page === "import" && <ImportSpreadsheet memberships={memberships} />}
-          {page === "review-imports" && <ImportedDataReview />}
-          {page === "reports" && <Reports />}
-          {page === "settings" && <ProjectSettings currentUserId={currentUserId} />}
+            <Suspense fallback={<PageLoadingFallback />}>
+            {page === "home" && <Overview onViewChallenges={() => setPage("challenges")} />}
+            {page === "workplan" && <WorkPlan />}
+            {page === "progress" && <ProgressTracking />}
+            {page === "challenges" && <Challenges />}
+            {page === "dataentry" && <DataEntry memberships={memberships} />}
+            {page === "import" && <ImportSpreadsheet memberships={memberships} />}
+            {page === "review-imports" && <ImportedDataReview />}
+            {page === "reports" && <Reports />}
+            {page === "settings" && <ProjectSettings currentUserId={currentUserId} />}
+            </Suspense>
           </ProjectDataProvider>}
         </main>
       </div>
