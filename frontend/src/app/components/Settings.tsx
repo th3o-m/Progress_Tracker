@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { apiRequest } from "../../lib/api";
-import { useProjectData, type ProjectMember, type ProjectRole } from "../ProjectDataContext";
+import { useProjectData, useProjectMembers, type ProjectMember, type ProjectRole } from "../ProjectDataContext";
 
 const roles: ProjectRole[] = ["officer", "supervisor", "finance", "admin"];
 const roleLabel: Record<ProjectRole, string> = {
@@ -142,7 +142,8 @@ function MemberCard({
 }
 
 export function Settings({ currentUserId }: { currentUserId?: string | null }) {
-  const { projectId, role, members, loading, error: projectDataError, refresh } = useProjectData();
+  const { projectId, role, refresh } = useProjectData();
+  const { data: members, loading, error: projectDataError, refresh: refreshMembers } = useProjectMembers();
   const canManage = role === "admin";
   const canViewMembers = canManage;
   const [email, setEmail] = useState("");
@@ -199,7 +200,7 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
       setEmail("");
       setDistrict("");
       setNewRole("officer");
-      await refresh();
+      await Promise.all([refresh(), refreshMembers()]);
       setMessage(`${normalizedEmail} now has access to this project.`);
     } catch (requestError) {
       showError(requestError, "Unable to add the employee");
@@ -219,7 +220,7 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
         method: "PATCH",
         body: JSON.stringify({ role: draft.role, district: draft.district.trim() || null }),
       });
-      await refresh();
+      await Promise.all([refresh(), refreshMembers()]);
       setMessage(`${member.profiles?.full_name || "Employee"}'s access was updated.`);
     } catch (requestError) {
       showError(requestError, "Unable to update the employee's access");
@@ -236,7 +237,7 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
     setMessage(null);
     try {
       await apiRequest(`/projects/${projectId}/members/${member.id}`, { method: "DELETE" });
-      await refresh();
+      await Promise.all([refresh(), refreshMembers()]);
       setMessage(`${name} no longer has access to this project.`);
     } catch (requestError) {
       showError(requestError, "Unable to remove the employee");
@@ -249,7 +250,7 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
     if (busy) return;
     setBusy("refresh");
     setError(null);
-    try { await refresh(); }
+    try { await Promise.all([refresh(), refreshMembers()]); }
     catch (requestError) { showError(requestError, "Unable to refresh project access"); }
     finally { setBusy(null); }
   }

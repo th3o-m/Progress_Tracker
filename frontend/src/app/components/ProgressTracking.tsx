@@ -1,12 +1,16 @@
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { useProjectData } from "../ProjectDataContext";
+import { useProjectActivities, useProjectProgressUpdates } from "../ProjectDataContext";
 import { EmptyState } from "./EmptyState";
 
 const colors = ["#1a3a6b", "#0e7490", "#16a34a", "#d97706", "#c0392b"];
 
 export function ProgressTracking() {
-  const { activities, progress, loading } = useProjectData();
+  const { data: activities, loading: activitiesLoading, error: activitiesError } = useProjectActivities();
+  const { data: progress, loading: progressLoading, error: progressError } = useProjectProgressUpdates();
+  const loading = activitiesLoading || progressLoading;
+  const error = activitiesError || progressError;
   if (loading) return <p className="text-sm text-muted-foreground">Loading progress...</p>;
+  if (error) return <p className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>;
   const statusData = Array.from(new Set(progress.map((item) => item.status))).map((status, index) => ({ name: status, value: progress.filter((item) => item.status === status).length, color: colors[index % colors.length] }));
   const latest = [...progress].sort((a, b) => b.report_date.localeCompare(a.report_date));
   return <div className="space-y-5">

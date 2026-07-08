@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { apiRequest } from "../../lib/api";
-import { useProjectData } from "../ProjectDataContext";
+import { useProjectActivities, useProjectData, useProjectMembers } from "../ProjectDataContext";
 import { EmptyState } from "./EmptyState";
 import { ImportSpreadsheet } from "./ImportSpreadsheet";
 import type { ProjectMembership } from "./ProjectSwitcher";
@@ -11,9 +11,11 @@ const today = new Date().toISOString().slice(0, 10);
 const blank = { activityId: "", code: "", name: "", category: "", district: "", responsibleOfficer: "", startDate: today, endDate: today, status: "", progressPct: "0", narrative: "", reportDate: today, challengeType: "", challengeDesc: "", mitigationPlan: "", beneficiaryName: "", nationalId: "", beneficiaryType: "", contactNumber: "", amount: "", expenseCategory: "", description: "" };
 
 export function DataEntry({ memberships = [] }: { memberships?: ProjectMembership[] }) {
-  const { projectId, role, activities, members, refresh } = useProjectData();
+  const { projectId, role, refresh } = useProjectData();
   const canCreateActivity = role === "admin" || role === "supervisor";
   const [tab, setTab] = useState<Tab>(role === "finance" ? "financial" : canCreateActivity ? "activity" : "progress");
+  const { data: activities, loading: activitiesLoading, error: activitiesError, refresh: refreshActivities } = useProjectActivities(tab !== "import");
+  const { data: members, loading: membersLoading, error: membersError, refresh: refreshMembers } = useProjectMembers(tab === "activity" && canCreateActivity);
   const [form, setForm] = useState(blank);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -44,7 +46,9 @@ export function DataEntry({ memberships = [] }: { memberships?: ProjectMembershi
     }
     try {
       await apiRequest(path, { method: "POST", body: JSON.stringify(body) });
-      setMessage("Entry saved. Dashboard metrics have been refreshed."); setForm(blank); await refresh();
+      setMessage("Entry saved. Dashboard metrics have been refreshed.");
+      setForm(blank);
+      await Promise.all([refresh(), refreshActivities(), canCreateActivity ? refreshMembers() : Promise.resolve()]);
     } catch (requestError) { setError(requestError instanceof Error ? requestError.message : "Unable to save entry"); }
     finally { setSubmitting(false); }
   }
@@ -61,11 +65,13 @@ export function DataEntry({ memberships = [] }: { memberships?: ProjectMembershi
   return <div className="space-y-5">
     <div className="rounded-md bg-[#1a3a6b] p-5 text-white"><p className="text-sm text-white/80">Entries are saved to the selected project and immediately update its metrics.</p></div>
     {message && <div className="flex gap-3 rounded-md border border-green-200 bg-green-50 p-4 text-green-800"><CheckCircle2 className="h-5 w-5" />{message}</div>}
-    {error && <div className="flex gap-3 rounded-md border border-red-200 bg-red-50 p-4 text-red-800"><AlertCircle className="h-5 w-5" />{error}</div>}
+    {(error || activitiesError || membersError) && <div className="flex gap-3 rounded-md border border-red-200 bg-red-50 p-4 text-red-800"><AlertCircle className="h-5 w-5" />{error || activitiesError || membersError}</div>}
     <div className="overflow-hidden rounded-md border border-border bg-card shadow-sm">
       <div className="flex flex-wrap border-b border-border">{tabs.map((item) => <button key={item.id} type="button" onClick={() => { setTab(item.id); setError(null); setMessage(null); }} className={`px-5 py-3 text-sm font-semibold ${tab === item.id ? "bg-[#1a3a6b] text-white" : "text-muted-foreground hover:bg-secondary"}`}>{item.label}</button>)}</div>
       {tab === "import" ? (
         <div className="p-6"><ImportSpreadsheet memberships={memberships} /></div>
+      ) : (activitiesLoading || (tab === "activity" && canCreateActivity && membersLoading)) ? (
+        <p className="p-6 text-sm text-muted-foreground">Loading entry data...</p>
       ) : tab !== "activity" && tab !== "beneficiary" && activities.length === 0 ? (
         <div className="p-6"><EmptyState message="Create an activity before entering activity-linked data." /></div>
       ) : (

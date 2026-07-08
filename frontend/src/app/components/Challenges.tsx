@@ -1,6 +1,6 @@
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useProjectData } from "../ProjectDataContext";
+import { useProjectChallenges } from "../ProjectDataContext";
 import { EmptyState } from "./EmptyState";
 
 type Filter = "open" | "resolved" | "all";
@@ -10,7 +10,7 @@ function formatDate(value: string): string {
 }
 
 export function Challenges() {
-  const { challenges, loading } = useProjectData();
+  const { data: challenges, loading, error } = useProjectChallenges();
   const [filter, setFilter] = useState<Filter>("open");
   const openCount = challenges.filter((item) => !item.resolved).length;
   const resolvedCount = challenges.length - openCount;
@@ -22,6 +22,7 @@ export function Challenges() {
   ];
 
   if (loading) return <p className="text-sm text-muted-foreground">Loading challenges...</p>;
+  if (error) return <p className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>;
 
   return (
     <div className="space-y-5">

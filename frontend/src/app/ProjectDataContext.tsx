@@ -13,53 +13,96 @@ export interface ProjectMember { id: string; role: ProjectRole; district: string
 interface ProjectData {
   projectId: string;
   role: ProjectRole;
-  activities: Activity[];
-  progress: ProgressUpdate[];
-  challenges: Challenge[];
-  beneficiaries: Beneficiary[];
-  financial: FinancialEntry[];
-  reports: GeneratedReport[];
-  members: ProjectMember[];
-  loading: boolean;
-  error: string | null;
   refresh: () => Promise<void>;
+  refreshVersion: number;
 }
 
 const Context = createContext<ProjectData | null>(null);
 
 export function ProjectDataProvider({ projectId, role, children }: { projectId: string; role: ProjectRole; children: ReactNode }) {
-  const [data, setData] = useState<Omit<ProjectData, "loading" | "error" | "refresh">>({ activities: [], progress: [], challenges: [], beneficiaries: [], financial: [], reports: [], members: [] });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
   const refresh = useCallback(async () => {
-    setLoading(true); setError(null);
-    try {
-      const base = `/projects/${projectId}`;
-      const hasOperationalAccess = role !== "finance";
-      const hasManagementAccess = role === "admin" || role === "supervisor";
-      const [activities, progress, challenges, beneficiaries, financial, reports, members] = await Promise.all([
-        apiRequest<Activity[]>(`${base}/activities`),
-        hasOperationalAccess ? apiRequest<ProgressUpdate[]>(`${base}/progress-updates`) : Promise.resolve([]),
-        hasOperationalAccess ? apiRequest<Challenge[]>(`${base}/challenges`) : Promise.resolve([]),
-        hasOperationalAccess ? apiRequest<Beneficiary[]>(`${base}/beneficiaries`) : Promise.resolve([]),
-        apiRequest<FinancialEntry[]>(`${base}/financial-entries`),
-        hasManagementAccess ? apiRequest<GeneratedReport[]>(`${base}/reports`) : Promise.resolve([]),
-        hasManagementAccess ? apiRequest<ProjectMember[]>(`${base}/members`) : Promise.resolve([]),
-      ]);
-      setData({ activities, progress, challenges, beneficiaries, financial, reports, members });
-    } catch (loadError) {
-      setData({ activities: [], progress: [], challenges: [], beneficiaries: [], financial: [], reports: [], members: [] });
-      setError(loadError instanceof Error ? loadError.message : "Unable to load project data");
-    } finally { setLoading(false); }
-  }, [projectId, role]);
+    setRefreshVersion((value) => value + 1);
+  }, []);
 
-  useEffect(() => { void refresh(); }, [refresh]);
-  return <Context.Provider value={{ projectId, role, ...data, loading, error, refresh }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ projectId, role, refresh, refreshVersion }}>{children}</Context.Provider>;
 }
 
 export function useProjectData() {
   const value = useContext(Context);
   if (!value) throw new Error("useProjectData must be used inside ProjectDataProvider");
   return value;
+}
+
+interface DatasetState<T> {
+  data: T;
+  loading: boolean;
+  error: string | null;
+  refresh: () => Promise<void>;
+}
+
+function useProjectDataset<T>(path: string | null, emptyValue: T, enabled = true): DatasetState<T> {
+  const { projectId, refreshVersion } = useProjectData();
+  const [data, setData] = useState<T>(emptyValue);
+  const activePath = enabled ? path : null;
+  const [loading, setLoading] = useState(Boolean(activePath));
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!activePath) {
+      setData(emptyValue);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      setData(await apiRequest<T>(activePath));
+    } catch (loadError) {
+      setData(emptyValue);
+      setError(loadError instanceof Error ? loadError.message : "Unable to load project data");
+    } finally {
+      setLoading(false);
+    }
+  }, [activePath]);
+
+  useEffect(() => { void load(); }, [load, projectId, refreshVersion]);
+  return { data, loading, error, refresh: load };
+}
+
+export function useProjectActivities(enabled = true) {
+  const { projectId } = useProjectData();
+  return useProjectDataset<Activity[]>(`/projects/${projectId}/activities`, [], enabled);
+}
+
+export function useProjectProgressUpdates(enabled = true) {
+  const { projectId, role } = useProjectData();
+  return useProjectDataset<ProgressUpdate[]>(role === "finance" ? null : `/projects/${projectId}/progress-updates`, [], enabled);
+}
+
+export function useProjectChallenges(enabled = true) {
+  const { projectId, role } = useProjectData();
+  return useProjectDataset<Challenge[]>(role === "finance" ? null : `/projects/${projectId}/challenges`, [], enabled);
+}
+
+export function useProjectBeneficiaries(enabled = true) {
+  const { projectId, role } = useProjectData();
+  return useProjectDataset<Beneficiary[]>(role === "finance" ? null : `/projects/${projectId}/beneficiaries`, [], enabled);
+}
+
+export function useProjectFinancials(enabled = true) {
+  const { projectId } = useProjectData();
+  return useProjectDataset<FinancialEntry[]>(`/projects/${projectId}/financial-entries`, [], enabled);
+}
+
+export function useProjectReports(enabled = true) {
+  const { projectId, role } = useProjectData();
+  return useProjectDataset<GeneratedReport[]>(role === "admin" || role === "supervisor" ? `/projects/${projectId}/reports` : null, [], enabled);
+}
+
+export function useProjectMembers(enabled = true) {
+  const { projectId, role } = useProjectData();
+  return useProjectDataset<ProjectMember[]>(role === "admin" || role === "supervisor" ? `/projects/${projectId}/members` : null, [], enabled);
 }

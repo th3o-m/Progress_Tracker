@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { useProjectData } from "../ProjectDataContext";
+import { useProjectActivities } from "../ProjectDataContext";
 import { EmptyState } from "./EmptyState";
 
 export function WorkPlan() {
-  const { activities, loading } = useProjectData();
+  const { data: activities, loading, error } = useProjectActivities();
   const [sort, setSort] = useState<"code" | "name" | "status">("code");
   const [ascending, setAscending] = useState(true);
   const [category, setCategory] = useState("All");
@@ -12,6 +12,7 @@ export function WorkPlan() {
   const rows = useMemo(() => activities.filter((item) => category === "All" || item.category === category).sort((a, b) => (ascending ? 1 : -1) * String(a[sort]).localeCompare(String(b[sort]))), [activities, category, sort, ascending]);
   const toggle = (field: typeof sort) => { if (field === sort) setAscending((value) => !value); else { setSort(field); setAscending(true); } };
   if (loading) return <p className="text-sm text-muted-foreground">Loading activities...</p>;
+  if (error) return <p className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>;
   if (activities.length === 0) return <EmptyState message="Create an activity in Data Entry to build the work plan." />;
   return <div className="space-y-5">
     <section className="rounded-md border border-border bg-card p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><h3 className="text-sm font-semibold uppercase tracking-wide">Activity Progress</h3><div className="flex gap-2">{categories.map((item) => <button key={item} onClick={() => setCategory(item)} className={`rounded px-3 py-1 text-xs ${category === item ? "bg-[#1a3a6b] text-white" : "bg-secondary text-muted-foreground"}`}>{item}</button>)}</div></div><div className="space-y-3">{rows.map((item) => <div key={item.id}><div className="mb-1 flex justify-between text-xs"><span><strong>{item.code}</strong> · {item.name}</span><span>{item.progress_pct}%</span></div><div className="h-2 overflow-hidden rounded bg-secondary"><div className="h-full rounded bg-[#0e7490]" style={{ width: `${item.progress_pct}%` }} /></div></div>)}</div></section>
