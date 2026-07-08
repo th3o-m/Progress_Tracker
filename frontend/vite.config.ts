@@ -33,4 +33,18 @@ export default defineConfig({
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+          if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return 'react-vendor'
+          if (/[\\/]node_modules[\\/]recharts[\\/]/.test(id)) return 'charts'
+          if (/[\\/]node_modules[\\/]xlsx[\\/]/.test(id)) return 'spreadsheet'
+          if (/[\\/]node_modules[\\/]@supabase[\\/]/.test(id)) return 'supabase'
+          if (/[\\/]node_modules[\\/]lucide-react[\\/]/.test(id)) return 'icons'
+        },
+      },
+    },
+  },
 })
