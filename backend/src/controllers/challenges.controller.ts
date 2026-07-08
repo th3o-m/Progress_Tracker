@@ -3,13 +3,19 @@ import { supabase } from '../config/supabase.js';
 import { createChallengeSchema, updateChallengeSchema } from '../schemas/index.js';
 import { applyReadScope, assertOfficerOwnership, getProjectRecord } from '../services/access.service.js';
 import { auditLog } from '../services/auditLog.service.js';
-import { ApiError, parseBody, throwDb } from '../utils/http.js';
+import { ApiError, getPagination, paginatedResponse, parseBody, throwDb } from '../utils/http.js';
 
 export async function listChallenges(req: Request, res: Response): Promise<void> {
-  let query = supabase.from('challenges').select('*, activities(code,name,district)').eq('project_id', req.context.projectId).order('created_at', { ascending: false });
+  const pagination = getPagination(req);
+  let query = supabase
+    .from('challenges')
+    .select('id, project_id, activity_id, officer_id, challenge_type, description, mitigation_plan, resolved, import_id, status_color, responsible_officer, due_date, created_at, activities(code,name,district)', pagination ? { count: 'exact' } : undefined)
+    .eq('project_id', req.context.projectId)
+    .order('created_at', { ascending: false });
   query = applyReadScope(query, req, 'officer_id');
   if (req.query.activity_id) query = query.eq('activity_id', String(req.query.activity_id));
-  const { data, error } = await query; throwDb(error); res.json(data);
+  if (pagination) query = query.range(pagination.from, pagination.to);
+  const { data, error, count } = await query; throwDb(error); res.json(paginatedResponse(data, pagination, count));
 }
 export async function createChallenge(req: Request, res: Response): Promise<void> {
   const body = parseBody(createChallengeSchema, req.body); const activity = await getProjectRecord(req, 'activities', body.activity_id);

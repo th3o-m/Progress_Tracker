@@ -3,10 +3,16 @@ import { supabase } from '../config/supabase.js';
 import { createProfileSchema, updateProfileSchema } from '../schemas/index.js';
 import { getRecord } from '../services/access.service.js';
 import { auditLog } from '../services/auditLog.service.js';
-import { ApiError, parseBody, throwDb } from '../utils/http.js';
+import { ApiError, getPagination, paginatedResponse, parseBody, throwDb } from '../utils/http.js';
 
-export async function listProfiles(_req: Request, res: Response): Promise<void> {
-  const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false }); throwDb(error); res.json(data);
+export async function listProfiles(req: Request, res: Response): Promise<void> {
+  const pagination = getPagination(req);
+  let query = supabase
+    .from('profiles')
+    .select('id, email, full_name, phone, is_org_admin, active, created_at', pagination ? { count: 'exact' } : undefined)
+    .order('created_at', { ascending: false });
+  if (pagination) query = query.range(pagination.from, pagination.to);
+  const { data, error, count } = await query; throwDb(error); res.json(paginatedResponse(data, pagination, count));
 }
 export async function createProfile(req: Request, res: Response): Promise<void> {
   const body = parseBody(createProfileSchema, req.body);

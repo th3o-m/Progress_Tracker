@@ -3,11 +3,11 @@ import { supabase } from '../config/supabase.js';
 import { addProjectMemberSchema, updateProjectMemberSchema } from '../schemas/index.js';
 import { auditLog } from '../services/auditLog.service.js';
 import { getRecord } from '../services/access.service.js';
-import { ApiError, parseBody, throwDb } from '../utils/http.js';
+import { ApiError, getPagination, paginatedResponse, parseBody, throwDb } from '../utils/http.js';
 
 export async function getCurrentUser(req: Request, res: Response): Promise<void> {
   const profile = await getRecord('profiles', req.user.id);
-  const { data: memberships, error } = await supabase.from('project_members').select('id, role, district, added_at, projects(id,name,description,district,sector,start_date,end_date,status,created_by,created_at)').eq('user_id', req.user.id).order('added_at', { ascending: false });
+  const { data: memberships, error } = await supabase.from('project_members').select('id, role, district, added_at, projects(id,name,description,district,sector,start_date,end_date,status,created_by,created_at,project_code,project_manager,planned_start_date,actual_start_date,planned_completion_date,actual_completion_date,estimated_budget,allocated_budget)').eq('user_id', req.user.id).order('added_at', { ascending: false });
   throwDb(error); res.json({ ...profile, projects: memberships ?? [] });
 }
 
@@ -22,7 +22,14 @@ export async function addProjectMember(req: Request, res: Response): Promise<voi
 }
 
 export async function listProjectMembers(req: Request, res: Response): Promise<void> {
-  const { data, error } = await supabase.from('project_members').select('id, role, district, added_at, profiles(id,email,full_name,phone,active)').eq('project_id', req.context.projectId).order('added_at'); throwDb(error); res.json(data);
+  const pagination = getPagination(req);
+  let query = supabase
+    .from('project_members')
+    .select('id, role, district, added_at, profiles(id,email,full_name,phone,active)', pagination ? { count: 'exact' } : undefined)
+    .eq('project_id', req.context.projectId)
+    .order('added_at');
+  if (pagination) query = query.range(pagination.from, pagination.to);
+  const { data, error, count } = await query; throwDb(error); res.json(paginatedResponse(data, pagination, count));
 }
 
 export async function removeProjectMember(req: Request, res: Response): Promise<void> {

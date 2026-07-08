@@ -3,13 +3,19 @@ import { supabase } from '../config/supabase.js';
 import { createProgressSchema, updateProgressSchema } from '../schemas/index.js';
 import { applyReadScope, assertOfficerOwnership, getProjectRecord } from '../services/access.service.js';
 import { auditLog } from '../services/auditLog.service.js';
-import { ApiError, parseBody, throwDb } from '../utils/http.js';
+import { ApiError, getPagination, paginatedResponse, parseBody, throwDb } from '../utils/http.js';
 
 export async function listProgress(req: Request, res: Response): Promise<void> {
-  let query = supabase.from('progress_updates').select('*, activities(code,name,district)').eq('project_id', req.context.projectId).order('report_date', { ascending: false });
+  const pagination = getPagination(req);
+  let query = supabase
+    .from('progress_updates')
+    .select('id, project_id, activity_id, officer_id, progress_pct, status, narrative, report_date, import_id, executive_summary, status_color, remarks, reporting_period, created_at, activities(code,name,district)', pagination ? { count: 'exact' } : undefined)
+    .eq('project_id', req.context.projectId)
+    .order('report_date', { ascending: false });
   query = applyReadScope(query, req, 'officer_id');
   if (req.query.activity_id) query = query.eq('activity_id', String(req.query.activity_id));
-  const { data, error } = await query; throwDb(error); res.json(data);
+  if (pagination) query = query.range(pagination.from, pagination.to);
+  const { data, error, count } = await query; throwDb(error); res.json(paginatedResponse(data, pagination, count));
 }
 export async function createProgress(req: Request, res: Response): Promise<void> {
   const body = parseBody(createProgressSchema, req.body);

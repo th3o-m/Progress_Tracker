@@ -3,11 +3,18 @@ import { supabase } from '../config/supabase.js';
 import { createProjectSchema, updateProjectSchema } from '../schemas/index.js';
 import { auditLog } from '../services/auditLog.service.js';
 import { applyReadScope, getRecord } from '../services/access.service.js';
-import { ApiError, parseBody, throwDb } from '../utils/http.js';
+import { ApiError, getPagination, paginatedResponse, parseBody, throwDb } from '../utils/http.js';
 
 export async function listProjects(req: Request, res: Response): Promise<void> {
-  const { data, error } = await supabase.from('project_members').select('role, district, added_at, projects(*)').eq('user_id', req.user.id).order('added_at', { ascending: false });
-  throwDb(error); res.json(data);
+  const pagination = getPagination(req);
+  let query = supabase
+    .from('project_members')
+    .select('role, district, added_at, projects(id,name,description,district,sector,start_date,end_date,status,created_by,created_at,project_code,project_manager,planned_start_date,actual_start_date,planned_completion_date,actual_completion_date,estimated_budget,allocated_budget)', pagination ? { count: 'exact' } : undefined)
+    .eq('user_id', req.user.id)
+    .order('added_at', { ascending: false });
+  if (pagination) query = query.range(pagination.from, pagination.to);
+  const { data, error, count } = await query;
+  throwDb(error); res.json(paginatedResponse(data, pagination, count));
 }
 
 export async function getProject(req: Request, res: Response): Promise<void> {

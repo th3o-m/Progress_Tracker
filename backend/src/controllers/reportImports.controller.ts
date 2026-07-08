@@ -2,20 +2,29 @@ import type { Request, Response } from 'express';
 import { supabase } from '../config/supabase.js';
 import { reportImportSchema, updateReportImportReviewSchema } from '../schemas/index.js';
 import { auditLog } from '../services/auditLog.service.js';
-import { ApiError, parseBody, throwDb } from '../utils/http.js';
+import { ApiError, getPagination, paginatedResponse, parseBody, throwDb } from '../utils/http.js';
+
+const projectReviewColumns = 'id, name, description, project_code, project_manager, planned_start_date, actual_start_date, planned_completion_date, actual_completion_date, estimated_budget, allocated_budget, district';
+const activityReviewColumns = 'id, project_id, code, name, category, district, responsible_officer, start_date, end_date, status, progress_pct, import_id, description, status_color, remarks, actual_completion_date, created_at';
+const progressReviewColumns = 'id, project_id, activity_id, officer_id, progress_pct, status, narrative, report_date, import_id, executive_summary, status_color, remarks, reporting_period, created_at, activities(code,name,district)';
+const challengeReviewColumns = 'id, project_id, activity_id, officer_id, challenge_type, description, mitigation_plan, resolved, import_id, status_color, responsible_officer, due_date, created_at, activities(code,name,district)';
+const financialReviewColumns = 'id, project_id, activity_id, expense_category, amount, description, receipt_url, status, submitted_by, approved_by, approved_at, import_id, approved_budget, balance, percentage_utilised, remarks, created_at, activities(code,name,district)';
+const reportImportColumns = 'id, project_id, source_file_name, source_sheet_name, reporting_period, import_type, selected_project_id, selected_sheet, file_name, imported_rows_count, import_status, blocking_errors, warnings, preview_data, raw_data, raw_preview_json, review_status, reviewed_by, reviewed_at, imported_by, created_at, updated_at';
 
 export async function listReportImports(req: Request, res: Response): Promise<void> {
+  const pagination = getPagination(req);
   let query = supabase
     .from('project_report_imports')
-    .select('*')
+    .select('id, project_id, source_file_name, source_sheet_name, reporting_period, import_type, selected_project_id, selected_sheet, file_name, imported_rows_count, import_status, blocking_errors, warnings, review_status, reviewed_by, reviewed_at, imported_by, created_at, updated_at', pagination ? { count: 'exact' } : undefined)
     .eq('project_id', req.context.projectId)
     .order('reporting_period', { ascending: false });
 
   if (req.query.reporting_period) query = query.eq('reporting_period', String(req.query.reporting_period));
+  if (pagination) query = query.range(pagination.from, pagination.to);
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   throwDb(error);
-  res.json(data ?? []);
+  res.json(paginatedResponse(data, pagination, count));
 }
 
 export async function createReportImport(req: Request, res: Response): Promise<void> {
@@ -83,7 +92,7 @@ export async function createReportImport(req: Request, res: Response): Promise<v
 async function getImport(req: Request, importId: string) {
   const { data, error } = await supabase
     .from('project_report_imports')
-    .select('*')
+    .select(reportImportColumns)
     .eq('id', importId)
     .eq('project_id', req.context.projectId)
     .maybeSingle();
@@ -96,11 +105,11 @@ export async function getReportImportReview(req: Request, res: Response): Promis
   const importId = String(req.params.importId);
   const reportImport = await getImport(req, importId);
   const [projectResult, activitiesResult, progressResult, challengesResult, financialResult, membersResult] = await Promise.all([
-    supabase.from('projects').select('*').eq('id', req.context.projectId).single(),
-    supabase.from('activities').select('*').eq('project_id', req.context.projectId).eq('import_id', importId).order('created_at', { ascending: true }),
-    supabase.from('progress_updates').select('*, activities(code,name,district)').eq('project_id', req.context.projectId).eq('import_id', importId).order('report_date', { ascending: true }),
-    supabase.from('challenges').select('*, activities(code,name,district)').eq('project_id', req.context.projectId).eq('import_id', importId).order('created_at', { ascending: true }),
-    supabase.from('financial_entries').select('*, activities(code,name,district)').eq('project_id', req.context.projectId).eq('import_id', importId).order('created_at', { ascending: true }),
+    supabase.from('projects').select(projectReviewColumns).eq('id', req.context.projectId).single(),
+    supabase.from('activities').select(activityReviewColumns).eq('project_id', req.context.projectId).eq('import_id', importId).order('created_at', { ascending: true }),
+    supabase.from('progress_updates').select(progressReviewColumns).eq('project_id', req.context.projectId).eq('import_id', importId).order('report_date', { ascending: true }),
+    supabase.from('challenges').select(challengeReviewColumns).eq('project_id', req.context.projectId).eq('import_id', importId).order('created_at', { ascending: true }),
+    supabase.from('financial_entries').select(financialReviewColumns).eq('project_id', req.context.projectId).eq('import_id', importId).order('created_at', { ascending: true }),
     supabase.from('project_members').select('id, role, district, profiles(id,email,full_name,phone,active)').eq('project_id', req.context.projectId).order('added_at', { ascending: false }),
   ]);
   [projectResult.error, activitiesResult.error, progressResult.error, challengesResult.error, financialResult.error, membersResult.error].forEach(throwDb);

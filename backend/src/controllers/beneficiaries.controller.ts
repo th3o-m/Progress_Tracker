@@ -3,11 +3,18 @@ import { supabase } from '../config/supabase.js';
 import { createBeneficiarySchema, updateBeneficiarySchema } from '../schemas/index.js';
 import { applyReadScope, assertDistrict, assertOfficerOwnership, getProjectRecord } from '../services/access.service.js';
 import { auditLog } from '../services/auditLog.service.js';
-import { parseBody, throwDb } from '../utils/http.js';
+import { getPagination, paginatedResponse, parseBody, throwDb } from '../utils/http.js';
 
 export async function listBeneficiaries(req: Request, res: Response): Promise<void> {
-  let query = supabase.from('beneficiaries').select('*').eq('project_id', req.context.projectId).order('created_at', { ascending: false }); query = applyReadScope(query, req);
-  const { data, error } = await query; throwDb(error); res.json(data);
+  const pagination = getPagination(req);
+  let query = supabase
+    .from('beneficiaries')
+    .select('id, project_id, full_name, national_id, beneficiary_type, district, contact_number, registered_by, notes, created_at', pagination ? { count: 'exact' } : undefined)
+    .eq('project_id', req.context.projectId)
+    .order('created_at', { ascending: false });
+  query = applyReadScope(query, req);
+  if (pagination) query = query.range(pagination.from, pagination.to);
+  const { data, error, count } = await query; throwDb(error); res.json(paginatedResponse(data, pagination, count));
 }
 export async function createBeneficiary(req: Request, res: Response): Promise<void> {
   const body = parseBody(createBeneficiarySchema, req.body); assertDistrict(req, body.district);

@@ -4,21 +4,34 @@ import { supabase } from '../config/supabase.js';
 import { generateReportSchema } from '../schemas/index.js';
 import { auditLog } from '../services/auditLog.service.js';
 import { buildExcel, buildPdf, type ReportData } from '../services/report.service.js';
-import { ApiError, parseBody, throwDb } from '../utils/http.js';
+import { ApiError, getPagination, paginatedResponse, parseBody, throwDb } from '../utils/http.js';
 
-export async function listReports(_req: Request, res: Response): Promise<void> {
-  const { data, error } = await supabase.from('reports').select('*').eq('project_id', _req.context.projectId).order('created_at', { ascending: false }); throwDb(error); res.json(data);
+const reportActivityColumns = 'id, code, name, category, district, responsible_officer, start_date, end_date, status, progress_pct, description, remarks, actual_completion_date, created_at';
+const reportProgressColumns = 'id, activity_id, officer_id, progress_pct, status, narrative, report_date, executive_summary, remarks, reporting_period, created_at';
+const reportChallengeColumns = 'id, activity_id, officer_id, challenge_type, description, mitigation_plan, resolved, responsible_officer, due_date, created_at';
+const reportBeneficiaryColumns = 'id, full_name, national_id, beneficiary_type, district, contact_number, notes, created_at';
+const reportFinancialColumns = 'id, activity_id, expense_category, amount, description, status, approved_budget, balance, percentage_utilised, remarks, created_at';
+
+export async function listReports(req: Request, res: Response): Promise<void> {
+  const pagination = getPagination(req);
+  let query = supabase
+    .from('reports')
+    .select('id, project_id, name, report_type, file_url, generated_by, created_at', pagination ? { count: 'exact' } : undefined)
+    .eq('project_id', req.context.projectId)
+    .order('created_at', { ascending: false });
+  if (pagination) query = query.range(pagination.from, pagination.to);
+  const { data, error, count } = await query; throwDb(error); res.json(paginatedResponse(data, pagination, count));
 }
 
 export async function generateReport(req: Request, res: Response): Promise<void> {
   const body = parseBody(generateReportSchema, req.body);
   const endTimestamp = `${body.end_date}T23:59:59.999Z`;
   const [activities, progress, challenges, beneficiaries, financial] = await Promise.all([
-    supabase.from('activities').select('*').eq('project_id', req.context.projectId).lte('start_date', body.end_date).gte('end_date', body.start_date).order('code'),
-    supabase.from('progress_updates').select('*').eq('project_id', req.context.projectId).gte('report_date', body.start_date).lte('report_date', body.end_date).order('report_date'),
-    supabase.from('challenges').select('*').eq('project_id', req.context.projectId).gte('created_at', `${body.start_date}T00:00:00Z`).lte('created_at', endTimestamp).order('created_at'),
-    supabase.from('beneficiaries').select('*').eq('project_id', req.context.projectId).gte('created_at', `${body.start_date}T00:00:00Z`).lte('created_at', endTimestamp).order('created_at'),
-    supabase.from('financial_entries').select('*').eq('project_id', req.context.projectId).gte('created_at', `${body.start_date}T00:00:00Z`).lte('created_at', endTimestamp).order('created_at'),
+    supabase.from('activities').select(reportActivityColumns).eq('project_id', req.context.projectId).lte('start_date', body.end_date).gte('end_date', body.start_date).order('code'),
+    supabase.from('progress_updates').select(reportProgressColumns).eq('project_id', req.context.projectId).gte('report_date', body.start_date).lte('report_date', body.end_date).order('report_date'),
+    supabase.from('challenges').select(reportChallengeColumns).eq('project_id', req.context.projectId).gte('created_at', `${body.start_date}T00:00:00Z`).lte('created_at', endTimestamp).order('created_at'),
+    supabase.from('beneficiaries').select(reportBeneficiaryColumns).eq('project_id', req.context.projectId).gte('created_at', `${body.start_date}T00:00:00Z`).lte('created_at', endTimestamp).order('created_at'),
+    supabase.from('financial_entries').select(reportFinancialColumns).eq('project_id', req.context.projectId).gte('created_at', `${body.start_date}T00:00:00Z`).lte('created_at', endTimestamp).order('created_at'),
   ]);
   for (const result of [activities, progress, challenges, beneficiaries, financial]) throwDb(result.error);
   const reportData: ReportData = {

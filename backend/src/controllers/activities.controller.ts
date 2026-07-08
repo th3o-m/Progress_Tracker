@@ -3,12 +3,18 @@ import { supabase } from '../config/supabase.js';
 import { createActivitySchema, updateActivitySchema } from '../schemas/index.js';
 import { applyReadScope, assertMemberOfProject, getProjectRecord } from '../services/access.service.js';
 import { auditLog } from '../services/auditLog.service.js';
-import { ApiError, parseBody, throwDb } from '../utils/http.js';
+import { ApiError, getPagination, paginatedResponse, parseBody, throwDb } from '../utils/http.js';
 
 export async function listActivities(req: Request, res: Response): Promise<void> {
-  let query = supabase.from('activities').select('*').eq('project_id', req.context.projectId).order('created_at', { ascending: false });
+  const pagination = getPagination(req);
+  let query = supabase
+    .from('activities')
+    .select('id, project_id, code, name, category, district, responsible_officer, start_date, end_date, status, progress_pct, import_id, description, status_color, remarks, actual_completion_date, created_at', pagination ? { count: 'exact' } : undefined)
+    .eq('project_id', req.context.projectId)
+    .order('created_at', { ascending: false });
   query = applyReadScope(query, req);
-  const { data, error } = await query; throwDb(error); res.json(data);
+  if (pagination) query = query.range(pagination.from, pagination.to);
+  const { data, error, count } = await query; throwDb(error); res.json(paginatedResponse(data, pagination, count));
 }
 
 export async function getActivity(req: Request, res: Response): Promise<void> {

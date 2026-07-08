@@ -3,13 +3,19 @@ import { supabase } from '../config/supabase.js';
 import { createFinancialSchema, decisionSchema, updateFinancialSchema } from '../schemas/index.js';
 import { applyReadScope, assertOfficerOwnership, getProjectRecord } from '../services/access.service.js';
 import { auditLog } from '../services/auditLog.service.js';
-import { ApiError, parseBody, throwDb } from '../utils/http.js';
+import { ApiError, getPagination, paginatedResponse, parseBody, throwDb } from '../utils/http.js';
 
 export async function listFinancialEntries(req: Request, res: Response): Promise<void> {
-  let query = supabase.from('financial_entries').select('*, activities(code,name,district)').eq('project_id', req.context.projectId).order('created_at', { ascending: false });
+  const pagination = getPagination(req);
+  let query = supabase
+    .from('financial_entries')
+    .select('id, project_id, activity_id, expense_category, amount, description, receipt_url, status, submitted_by, approved_by, approved_at, import_id, approved_budget, balance, percentage_utilised, remarks, created_at, activities(code,name,district)', pagination ? { count: 'exact' } : undefined)
+    .eq('project_id', req.context.projectId)
+    .order('created_at', { ascending: false });
   query = applyReadScope(query, req, 'submitted_by');
   if (req.query.status) query = query.eq('status', String(req.query.status));
-  const { data, error } = await query; throwDb(error); res.json(data);
+  if (pagination) query = query.range(pagination.from, pagination.to);
+  const { data, error, count } = await query; throwDb(error); res.json(paginatedResponse(data, pagination, count));
 }
 export async function createFinancialEntry(req: Request, res: Response): Promise<void> {
   const body = parseBody(createFinancialSchema, req.body); const activity = await getProjectRecord(req, 'activities', body.activity_id);
