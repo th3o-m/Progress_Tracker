@@ -351,9 +351,9 @@ export default function App() {
               <p className="mt-2 text-sm text-muted-foreground">Ask an organization administrator to add you to a project, or create one if you are an organization administrator.</p>
             </div>
           )}
-          {selectedMembership && <ProjectDataProvider projectId={selectedMembership.projects.id} role={selectedMembership.role}>
+          {selectedMembership && page === "home" && <Overview projectId={selectedMembership.projects.id} onViewChallenges={() => setPage("challenges")} />}
+          {selectedMembership && page !== "home" && <ProjectDataProvider projectId={selectedMembership.projects.id} role={selectedMembership.role}>
             <Suspense fallback={<PageLoadingFallback />}>
-            {page === "home" && <Overview onViewChallenges={() => setPage("challenges")} />}
             {page === "workplan" && <WorkPlan />}
             {page === "progress" && <ProgressTracking />}
             {page === "challenges" && <Challenges />}

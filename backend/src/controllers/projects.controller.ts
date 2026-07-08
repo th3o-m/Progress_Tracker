@@ -19,6 +19,25 @@ function normalizeStatus(value: unknown): string {
   return String(value ?? '').trim().toLowerCase().replace(/[_-]+/g, ' ');
 }
 
+function isCompletedStatus(value: unknown): boolean {
+  return ['completed', 'complete'].includes(normalizeStatus(value));
+}
+
+function isInProgressStatus(value: unknown): boolean {
+  return ['in progress', 'ongoing', 'active'].includes(normalizeStatus(value));
+}
+
+function isNotStartedStatus(value: unknown): boolean {
+  return ['not started', 'pending'].includes(normalizeStatus(value));
+}
+
+function isOverdueActivity(activity: Record<string, any>, today = new Date()): boolean {
+  if (isCompletedStatus(activity.status)) return false;
+  if (!activity.end_date) return false;
+  const endDate = new Date(`${activity.end_date}T23:59:59`);
+  return Number.isFinite(endDate.getTime()) && endDate < today;
+}
+
 function countByStatus(rows: Array<Record<string, any>>, statuses: string[]): number {
   const targets = new Set(statuses.map(normalizeStatus));
   return rows.filter((row) => targets.has(normalizeStatus(row.status))).length;
@@ -50,6 +69,147 @@ function buildExecutiveSummary(overallProgress: number, totalActivities: number,
   else parts.push('Recent updates indicate active implementation records are being captured.');
   if (unresolvedChallenges > 0) parts.push(`Key attention is required for ${unresolvedChallenges} unresolved challenge${unresolvedChallenges === 1 ? '' : 's'}.`);
   return parts.join(' ');
+}
+
+export async function getProjectSummary(req: Request, res: Response): Promise<void> {
+  let activitiesQuery = supabase
+    .from('activities')
+    .select('status, progress_pct, end_date')
+    .eq('project_id', req.context.projectId);
+  activitiesQuery = applyReadScope(activitiesQuery, req);
+
+  let recentActivitiesQuery = supabase
+    .from('activities')
+    .select('id, code, name, district, status, progress_pct, created_at')
+    .eq('project_id', req.context.projectId)
+    .order('created_at', { ascending: false })
+    .limit(6);
+  recentActivitiesQuery = applyReadScope(recentActivitiesQuery, req);
+
+  let progressQuery = supabase
+    .from('progress_updates')
+    .select('progress_pct, report_date')
+    .eq('project_id', req.context.projectId);
+  progressQuery = applyReadScope(progressQuery, req, 'officer_id');
+
+  let recentProgressQuery = supabase
+    .from('progress_updates')
+    .select('id, progress_pct, status, narrative, report_date, created_at, activities(code,name,district)')
+    .eq('project_id', req.context.projectId)
+    .order('report_date', { ascending: false })
+    .limit(5);
+  recentProgressQuery = applyReadScope(recentProgressQuery, req, 'officer_id');
+
+  let challengesQuery = supabase
+    .from('challenges')
+    .select('id', { count: 'exact', head: true })
+    .eq('project_id', req.context.projectId)
+    .eq('resolved', false);
+  challengesQuery = applyReadScope(challengesQuery, req, 'officer_id');
+
+  let beneficiariesQuery = supabase
+    .from('beneficiaries')
+    .select('id', { count: 'exact', head: true })
+    .eq('project_id', req.context.projectId);
+  beneficiariesQuery = applyReadScope(beneficiariesQuery, req);
+
+  let financialQuery = supabase
+    .from('financial_entries')
+    .select('amount, status, submitted_by')
+    .eq('project_id', req.context.projectId);
+  financialQuery = applyReadScope(financialQuery, req, 'submitted_by');
+
+  const projectQuery = supabase
+    .from('projects')
+    .select('estimated_budget, allocated_budget')
+    .eq('id', req.context.projectId)
+    .maybeSingle();
+
+  const [
+    activitiesResult,
+    recentActivitiesResult,
+    progressResult,
+    recentProgressResult,
+    challengesResult,
+    beneficiariesResult,
+    financialResult,
+    projectResult,
+  ] = await Promise.all([
+    activitiesQuery,
+    recentActivitiesQuery,
+    req.context.roleInProject === 'finance' ? Promise.resolve({ data: [], error: null }) : progressQuery,
+    req.context.roleInProject === 'finance' ? Promise.resolve({ data: [], error: null }) : recentProgressQuery,
+    req.context.roleInProject === 'finance' ? Promise.resolve({ count: 0, error: null }) : challengesQuery,
+    req.context.roleInProject === 'finance' ? Promise.resolve({ count: 0, error: null }) : beneficiariesQuery,
+    financialQuery,
+    projectQuery,
+  ]);
+
+  throwDb(activitiesResult.error);
+  throwDb(recentActivitiesResult.error);
+  throwDb(progressResult.error);
+  throwDb(recentProgressResult.error);
+  throwDb(challengesResult.error);
+  throwDb(beneficiariesResult.error);
+  throwDb(financialResult.error);
+  throwDb(projectResult.error);
+
+  const activities = activitiesResult.data ?? [];
+  const recentActivities = recentActivitiesResult.data ?? [];
+  const progressUpdates = progressResult.data ?? [];
+  const recentProgressUpdates = recentProgressResult.data ?? [];
+  const financialEntries = financialResult.data ?? [];
+  const totalActivities = activities.length;
+  const completedActivities = activities.filter((activity) => isCompletedStatus(activity.status)).length;
+  const inProgressActivities = activities.filter((activity) => isInProgressStatus(activity.status)).length;
+  const notStartedActivities = activities.filter((activity) => isNotStartedStatus(activity.status)).length;
+  const overdueActivities = activities.filter((activity) => isOverdueActivity(activity)).length;
+  const averageProgress = totalActivities ? Math.round(activities.reduce((total, activity) => total + Number(activity.progress_pct ?? 0), 0) / totalActivities) : 0;
+  const activityStatusSummary = Array.from(activities.reduce((map, activity) => {
+    const label = firstText(activity.status, 'Unspecified') ?? 'Unspecified';
+    map.set(label, (map.get(label) ?? 0) + 1);
+    return map;
+  }, new Map<string, number>())).map(([status, count]) => ({ status, count }));
+  const monthlyProgressSummary = Array.from({ length: 12 }, (_, index) => {
+    const rows = progressUpdates.filter((item) => item.report_date && new Date(item.report_date).getMonth() === index);
+    return {
+      month: new Date(2026, index).toLocaleString('en', { month: 'short' }),
+      updates: rows.length,
+      average: rows.length ? Math.round(rows.reduce((total, row) => total + Number(row.progress_pct ?? 0), 0) / rows.length) : 0,
+    };
+  }).filter((item) => item.updates > 0);
+
+  res.json({
+    totalActivities,
+    completedActivities,
+    inProgressActivities,
+    notStartedActivities,
+    overdueActivities,
+    unresolvedChallenges: challengesResult.count ?? 0,
+    totalBeneficiaries: beneficiariesResult.count ?? 0,
+    totalBudget: Number(projectResult.data?.allocated_budget ?? projectResult.data?.estimated_budget ?? 0),
+    totalSpent: sum(financialEntries, 'amount'),
+    averageProgress,
+    activityStatusSummary,
+    recentActivities: recentActivities.map((activity) => ({
+      id: activity.id,
+      code: activity.code,
+      name: activity.name,
+      district: activity.district,
+      status: activity.status,
+      progress_pct: Number(activity.progress_pct ?? 0),
+      created_at: activity.created_at,
+    })),
+    recentProgressUpdates: recentProgressUpdates.map((update) => ({
+      id: update.id,
+      title: firstText(relatedActivityName(update.activities), update.status),
+      narrative: update.narrative ?? null,
+      progress_pct: Number(update.progress_pct ?? 0),
+      report_date: update.report_date ?? null,
+      created_at: update.created_at ?? null,
+    })),
+    monthlyProgressSummary,
+  });
 }
 
 export async function getProjectPresentation(req: Request, res: Response): Promise<void> {
