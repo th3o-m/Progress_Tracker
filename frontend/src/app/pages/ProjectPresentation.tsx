@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, ClipboardList, Download, FileText
 import { apiRequest } from "../../lib/api";
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
+import { Skeleton } from "../components/ui/skeleton";
 
 interface PresentationData {
   project: {
@@ -111,7 +112,7 @@ export function ProjectPresentation({ projectId }: { projectId: string }) {
     window.location.href = `/?project=${projectId}`;
   }
 
-  if (loading) return <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">Loading presentation...</div>;
+  if (loading) return <div className="min-h-screen bg-slate-100 p-6 text-slate-950" aria-busy="true"><div className="mx-auto max-w-7xl space-y-6 pt-20"><div className="flex items-center justify-between"><Skeleton className="h-9 w-40 bg-slate-300" /><Skeleton className="h-5 w-48 bg-slate-300" /><Skeleton className="h-9 w-24 bg-slate-300" /></div><section className="min-h-[72vh] rounded-md bg-white p-8 shadow-sm md:p-12"><Skeleton className="mb-8 h-4 w-40 bg-slate-200" /><Skeleton className="mb-8 h-12 w-2/3 bg-slate-200" /><div className="grid gap-8 lg:grid-cols-[1.4fr_0.9fr]"><div className="space-y-5"><Skeleton className="h-16 w-full bg-slate-200" /><Skeleton className="h-8 w-5/6 bg-slate-200" /><Skeleton className="h-8 w-3/4 bg-slate-200" /><div className="grid gap-3 sm:grid-cols-2">{Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-5 bg-slate-200" />)}</div></div><Skeleton className="h-72 bg-slate-200" /></div></section></div></div>;
   if (error || !data) return <div className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white"><div className="max-w-md rounded-md bg-white p-6 text-slate-950"><p className="font-semibold">Presentation unavailable</p><p className="mt-2 text-sm text-slate-600">{error || "No presentation data returned."}</p><Button className="mt-4" onClick={backToDashboard}>Back to dashboard</Button></div></div>;
 
   const slides = [

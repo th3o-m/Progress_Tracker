@@ -2,6 +2,20 @@ import { useMemo, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useProjectActivities } from "../ProjectDataContext";
 import { EmptyState } from "./EmptyState";
+import { Skeleton } from "./ui/skeleton";
+
+function WorkPlanSkeleton() {
+  return <div className="space-y-5" aria-busy="true">
+    <section className="rounded-md border border-border bg-card p-5 shadow-sm">
+      <div className="mb-4 flex items-center justify-between"><Skeleton className="h-4 w-36" /><div className="flex gap-2">{Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-7 w-20" />)}</div></div>
+      <div className="space-y-4">{Array.from({ length: 5 }).map((_, index) => <div key={index} className="space-y-2"><Skeleton className="h-4 w-full" /><Skeleton className="h-2 w-full" /></div>)}</div>
+    </section>
+    <section className="rounded-md border border-border bg-card p-5 shadow-sm">
+      <Skeleton className="mb-5 h-4 w-36" />
+      <div className="space-y-3">{Array.from({ length: 7 }).map((_, index) => <Skeleton key={index} className="h-8 w-full" />)}</div>
+    </section>
+  </div>;
+}
 
 export function WorkPlan() {
   const { data: activities, loading, error } = useProjectActivities();
@@ -11,7 +25,7 @@ export function WorkPlan() {
   const categories = ["All", ...new Set(activities.map((item) => item.category))];
   const rows = useMemo(() => activities.filter((item) => category === "All" || item.category === category).sort((a, b) => (ascending ? 1 : -1) * String(a[sort]).localeCompare(String(b[sort]))), [activities, category, sort, ascending]);
   const toggle = (field: typeof sort) => { if (field === sort) setAscending((value) => !value); else { setSort(field); setAscending(true); } };
-  if (loading) return <p className="text-sm text-muted-foreground">Loading activities...</p>;
+  if (loading) return <WorkPlanSkeleton />;
   if (error) return <p className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>;
   if (activities.length === 0) return <EmptyState message="Create an activity in Data Entry to build the work plan." />;
   return <div className="space-y-5">

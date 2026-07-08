@@ -4,8 +4,17 @@ import { Download, FileText } from "lucide-react";
 import { apiRequest } from "../../lib/api";
 import { useProjectBeneficiaries, useProjectChallenges, useProjectData, useProjectFinancials, useProjectReports } from "../ProjectDataContext";
 import { EmptyState } from "./EmptyState";
+import { Skeleton } from "./ui/skeleton";
 
 const colors = ["#1a3a6b", "#0e7490", "#d97706", "#7c3aed", "#c0392b"];
+
+function ReportsSkeleton() {
+  return <div className="space-y-6" aria-busy="true">
+    <Skeleton className="h-[300px] rounded-md" />
+    <div className="grid grid-cols-2 gap-4"><Skeleton className="h-[280px] rounded-md" /><Skeleton className="h-[280px] rounded-md" /></div>
+    <section className="rounded-md border border-border bg-card p-5 shadow-sm"><div className="mb-5 flex items-center justify-between"><Skeleton className="h-4 w-40" /><Skeleton className="h-9 w-36" /></div><div className="space-y-3">{Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="h-8 w-full" />)}</div></section>
+  </div>;
+}
 
 export function Reports() {
   const { projectId, role, refresh } = useProjectData();
@@ -32,7 +41,7 @@ export function Reports() {
     finally { setGenerating(false); }
   }
 
-  if (loading) return <p className="text-sm text-muted-foreground">Loading reports...</p>;
+  if (loading) return <ReportsSkeleton />;
   return <div className="space-y-6">
     {(error || loadError) && <p className="rounded bg-red-50 p-3 text-sm text-red-700">{error || loadError}</p>}
     <section className="rounded-md border border-border bg-card p-5 shadow-sm"><h3 className="mb-4 text-sm font-semibold uppercase tracking-wide">Expenditure by Category (BWP)</h3>{expenseData.length === 0 ? <EmptyState /> : <ResponsiveContainer width="100%" height={240}><BarChart data={expenseData}><CartesianGrid strokeDasharray="3 3" stroke="var(--border)" /><XAxis dataKey="category" tick={{ fontSize: 10 }} /><YAxis /><Tooltip formatter={(value) => `BWP ${Number(value).toLocaleString()}`} /><Bar dataKey="amount" fill="#1a3a6b" radius={[3, 3, 0, 0]} /></BarChart></ResponsiveContainer>}</section>

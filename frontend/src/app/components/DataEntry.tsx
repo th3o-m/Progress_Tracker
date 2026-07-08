@@ -4,11 +4,19 @@ import { apiRequest } from "../../lib/api";
 import { useProjectActivities, useProjectData, useProjectMembers } from "../ProjectDataContext";
 import { EmptyState } from "./EmptyState";
 import { ImportSpreadsheet } from "./ImportSpreadsheet";
+import { Skeleton } from "./ui/skeleton";
 import type { ProjectMembership } from "./ProjectSwitcher";
 
 type Tab = "activity" | "progress" | "challenge" | "beneficiary" | "financial" | "import";
 const today = new Date().toISOString().slice(0, 10);
 const blank = { activityId: "", code: "", name: "", category: "", district: "", responsibleOfficer: "", startDate: today, endDate: today, status: "", progressPct: "0", narrative: "", reportDate: today, challengeType: "", challengeDesc: "", mitigationPlan: "", beneficiaryName: "", nationalId: "", beneficiaryType: "", contactNumber: "", amount: "", expenseCategory: "", description: "" };
+
+function EntryFormSkeleton() {
+  return <div className="space-y-5 p-6" aria-busy="true">
+    <div className="grid grid-cols-2 gap-4">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="space-y-2"><Skeleton className="h-3 w-28" /><Skeleton className="h-10 w-full" /></div>)}</div>
+    <div className="flex justify-end gap-3"><Skeleton className="h-9 w-20" /><Skeleton className="h-9 w-28" /></div>
+  </div>;
+}
 
 export function DataEntry({ memberships = [] }: { memberships?: ProjectMembership[] }) {
   const { projectId, role, refresh } = useProjectData();
@@ -71,7 +79,7 @@ export function DataEntry({ memberships = [] }: { memberships?: ProjectMembershi
       {tab === "import" ? (
         <div className="p-6"><ImportSpreadsheet memberships={memberships} /></div>
       ) : (activitiesLoading || (tab === "activity" && canCreateActivity && membersLoading)) ? (
-        <p className="p-6 text-sm text-muted-foreground">Loading entry data...</p>
+        <EntryFormSkeleton />
       ) : tab !== "activity" && tab !== "beneficiary" && activities.length === 0 ? (
         <div className="p-6"><EmptyState message="Create an activity before entering activity-linked data." /></div>
       ) : (

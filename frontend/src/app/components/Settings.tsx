@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { apiRequest } from "../../lib/api";
 import { useProjectData, useProjectMembers, type ProjectMember, type ProjectRole } from "../ProjectDataContext";
+import { Skeleton } from "./ui/skeleton";
 
 const roles: ProjectRole[] = ["officer", "supervisor", "finance", "admin"];
 const roleLabel: Record<ProjectRole, string> = {
@@ -28,6 +29,10 @@ const permissions: Record<ProjectRole, string[]> = {
   finance: ["View project activities", "Submit expenses", "Review financial entries"],
   admin: ["Full project access", "Manage members and roles", "Manage all project records"],
 };
+
+function MembersSkeleton() {
+  return <div className="grid gap-4 lg:grid-cols-2" aria-busy="true">{Array.from({ length: 4 }).map((_, index) => <article key={index} className="rounded-lg border border-border bg-card p-4 shadow-sm"><div className="flex items-start gap-3"><Skeleton className="h-10 w-10 rounded-full" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-1/2" /></div><Skeleton className="h-6 w-24 rounded-full" /></div><div className="mt-4 grid gap-3 sm:grid-cols-2"><Skeleton className="h-10" /><Skeleton className="h-10" /></div></article>)}</div>;
+}
 
 interface MemberDraft {
   role: ProjectRole;
@@ -340,7 +345,7 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
           </div>
 
           {loading && members.length === 0 ? (
-            <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-10 text-sm text-muted-foreground"><LoaderCircle className="h-4 w-4 animate-spin" />Loading project members...</div>
+            <MembersSkeleton />
           ) : filteredMembers.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center"><Users className="mx-auto h-7 w-7 text-muted-foreground" /><p className="mt-3 text-sm font-medium text-foreground">{members.length === 0 ? "No project members found" : "No members match your filters"}</p><p className="mt-1 text-xs text-muted-foreground">{members.length === 0 ? "Grant access to an existing employee to build this project team." : "Try a different search or role filter."}</p>{members.length > 0 && <button type="button" onClick={() => { setSearch(""); setRoleFilter("all"); }} className="mt-3 text-xs font-semibold text-[#1a3a6b]">Clear filters</button>}</div>
           ) : (

@@ -2,11 +2,23 @@ import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useProjectChallenges } from "../ProjectDataContext";
 import { EmptyState } from "./EmptyState";
+import { Skeleton } from "./ui/skeleton";
 
 type Filter = "open" | "resolved" | "all";
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString("en-BW", { year: "numeric", month: "short", day: "numeric" });
+}
+
+function ChallengesSkeleton() {
+  return <div className="space-y-5" aria-busy="true">
+    <section className="rounded-md border border-border bg-card p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4"><div className="space-y-2"><Skeleton className="h-5 w-64" /><Skeleton className="h-4 w-80" /></div><div className="flex gap-2">{Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-8 w-28" />)}</div></div>
+    </section>
+    <section className="rounded-md border border-border bg-card p-5 shadow-sm">
+      <div className="space-y-3">{Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-14 w-full" />)}</div>
+    </section>
+  </div>;
 }
 
 export function Challenges() {
@@ -21,7 +33,7 @@ export function Challenges() {
     { id: "all", label: "All", count: challenges.length },
   ];
 
-  if (loading) return <p className="text-sm text-muted-foreground">Loading challenges...</p>;
+  if (loading) return <ChallengesSkeleton />;
   if (error) return <p className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>;
 
   return (

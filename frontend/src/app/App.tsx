@@ -10,6 +10,7 @@ import { apiRequest } from "../lib/api";
 import { ProjectSwitcher, type ProjectMembership } from "./components/ProjectSwitcher";
 import { ProjectDataProvider } from "./ProjectDataContext";
 import { ThemeToggle } from "./components/ThemeToggle";
+import { Skeleton } from "./components/ui/skeleton";
 
 const WorkPlan = lazy(() => import("./components/WorkPlan").then((module) => ({ default: module.WorkPlan })));
 const ProgressTracking = lazy(() => import("./components/ProgressTracking").then((module) => ({ default: module.ProgressTracking })));
@@ -46,7 +47,14 @@ function getInitialTheme(): Theme {
 }
 
 function PageLoadingFallback() {
-  return <div className="min-h-[240px] flex items-center justify-center text-sm text-muted-foreground">Loading page...</div>;
+  return <div className="space-y-4" aria-busy="true">
+    <Skeleton className="h-8 w-48" />
+    <div className="grid gap-4 md:grid-cols-2">
+      <Skeleton className="h-36" />
+      <Skeleton className="h-36" />
+    </div>
+    <Skeleton className="h-48" />
+  </div>;
 }
 
 const navItems: { id: Page; label: string; icon: typeof LayoutDashboard }[] = [
@@ -178,7 +186,7 @@ export default function App() {
   }
 
   if (authenticated === null) {
-    return <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground">Loading session...</div>;
+    return <div className="min-h-screen bg-background flex items-center justify-center p-6" aria-busy="true"><div className="w-full max-w-sm space-y-4"><Skeleton className="mx-auto h-10 w-10 rounded-full" /><Skeleton className="h-5 w-full" /><Skeleton className="mx-auto h-4 w-2/3" /></div></div>;
   }
 
   if (!authenticated) {
@@ -198,7 +206,7 @@ export default function App() {
 
   if (presentationProjectId) {
     return (
-      <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground">Loading page...</div>}>
+      <Suspense fallback={<div className="min-h-screen bg-background p-8" aria-busy="true"><Skeleton className="mb-6 h-10 w-56" /><Skeleton className="h-[70vh] w-full" /></div>}>
         <ProjectPresentation projectId={presentationProjectId} />
       </Suspense>
     );

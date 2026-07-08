@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, LoaderCircle, Plus, RefreshCw, RotateCcw, Save, Search, Trash2, X } from "lucide-react";
 import { apiRequest } from "../../lib/api";
 import { useProjectData, type Activity, type Challenge, type FinancialEntry, type ProgressUpdate, type ProjectMember } from "../ProjectDataContext";
+import { Skeleton } from "./ui/skeleton";
 
 type ReviewStatus = "imported" | "under_review" | "corrected" | "approved";
 type Section = "all" | "project" | "activities" | "progress" | "challenges" | "financial";
@@ -152,6 +153,10 @@ function Field({ label, value, type = "text", disabled, onChange }: { label: str
 
 function SelectField({ label, value, disabled, options, onChange }: { label: string; value: string; disabled?: boolean; options: string[]; onChange: (value: string) => void }) {
   return <label className="text-xs font-medium text-muted-foreground">{label}<select value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} className={`${inputClass} mt-1 disabled:opacity-60`}>{options.map((item) => <option key={item} value={item}>{item || "Blank"}</option>)}</select></label>;
+}
+
+function ReviewRecordsSkeleton() {
+  return <div className="space-y-4" aria-busy="true"><section className="rounded-lg border border-border bg-card p-4 shadow-sm"><Skeleton className="mb-4 h-5 w-48" /><div className="grid gap-3 md:grid-cols-2">{Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-10 w-full" />)}</div></section><section className="rounded-lg border border-border bg-card p-4 shadow-sm"><Skeleton className="mb-4 h-5 w-56" /><div className="space-y-3">{Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="h-12 w-full" />)}</div></section></div>;
 }
 
 export function ImportedDataReview() {
@@ -514,7 +519,7 @@ export function ImportedDataReview() {
         </aside>
 
         <main className="space-y-4">
-          {busy === "load" && <div className="flex items-center gap-2 rounded-md border border-border bg-card p-4 text-sm text-muted-foreground"><LoaderCircle className="h-4 w-4 animate-spin" />Loading records...</div>}
+          {busy === "load" && <ReviewRecordsSkeleton />}
           {!draft && busy !== "load" && <div className="rounded-md border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">No records selected.</div>}
 
           {draft && section === "all" && <SpreadsheetPreview rows={rawRows} />}
