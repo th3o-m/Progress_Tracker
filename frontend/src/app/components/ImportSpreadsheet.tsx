@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { AlertCircle, CheckCircle2, FileSpreadsheet, LoaderCircle, RefreshCw, Upload, X } from "lucide-react";
-import * as XLSX from "xlsx";
+import type { WorkBook } from "xlsx";
 import { apiRequest } from "../../lib/api";
 import { useProjectData, type Activity, type FinancialEntry, type ProjectMember } from "../ProjectDataContext";
 import { parseWorkbookSheet, type FinancialPreview, type MilestonePreview, type ParsedSpreadsheetPreview, type ProjectDetailsPreview, type RiskPreview } from "../importSpreadsheetParser";
 import type { ProjectMembership } from "./ProjectSwitcher";
 
-type WorkbookState = { workbook: XLSX.WorkBook; fileName: string; sheets: string[] } | null;
+type WorkbookState = { workbook: WorkBook; fileName: string; sheets: string[] } | null;
 type DuplicateMode = "skip" | "update" | "new";
 type ImportDuplicate = { type: "activity" | "financial" | "report"; label: string; id?: string };
 type ReportImportRecord = { id: string; review_status?: string };
@@ -150,8 +150,9 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
     const reader = new FileReader();
     reader.onprogress = (progress) => progress.lengthComputable && setUploadProgress(Math.round((progress.loaded / progress.total) * 100));
     reader.onerror = () => { setError("Unable to read the workbook."); setLoading(false); };
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
+        const XLSX = await import("xlsx");
         const workbook = XLSX.read(reader.result, { type: "array", cellDates: true });
         setWorkbookState({ workbook, fileName: file.name, sheets: workbook.SheetNames });
         setSelectedSheet(workbook.SheetNames[0] ?? "");
@@ -196,7 +197,8 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
     setError(null);
     setMessage(null);
     try {
-      const parsed = parseWorkbookSheet(workbookState.workbook, sheetName, workbookState.fileName);
+      const XLSX = await import("xlsx");
+      const parsed = parseWorkbookSheet(workbookState.workbook, sheetName, workbookState.fileName, XLSX.utils);
       setPreview(parsed);
       setDuplicates([...findDuplicates(parsed), ...await findReportDuplicate(parsed)]);
       setDuplicateMode("skip");

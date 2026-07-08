@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import type * as XLSX from "xlsx";
 
 export type ImportStatus = "Not Started" | "In Progress" | "Completed" | "On Hold";
 
@@ -438,11 +438,13 @@ export function parseRows(rows: Row[], sourceSheetName: string, sourceFileName =
   return { sourceFileName, sourceSheetName, projectDetails, milestones, risks, financialRows, rawRows, warnings, errors };
 }
 
-export function parseWorkbookSheet(workbook: XLSX.WorkBook, sheetName: string, fileName: string): ParsedSpreadsheetPreview {
+type SpreadsheetUtils = Pick<typeof XLSX.utils, "sheet_to_json">;
+
+export function parseWorkbookSheet(workbook: XLSX.WorkBook, sheetName: string, fileName: string, utils: SpreadsheetUtils): ParsedSpreadsheetPreview {
   const sheet = workbook.Sheets[sheetName];
-  const rawRows = XLSX.utils
+  const rawRows = utils
     .sheet_to_json<Row>(sheet, { header: 1, defval: "", blankrows: false })
     .map((row) => row.map(rawCell));
-  const rows = XLSX.utils.sheet_to_json<Row>(sheet, { header: 1, defval: "", raw: false, blankrows: false });
+  const rows = utils.sheet_to_json<Row>(sheet, { header: 1, defval: "", raw: false, blankrows: false });
   return parseRows(rows, sheetName, fileName, rawRows);
 }
