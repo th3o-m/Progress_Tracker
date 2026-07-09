@@ -68,8 +68,9 @@ export function NotificationsBell({ projectId, onNavigate }: NotificationsBellPr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const generatedProjectIdsRef = useRef<Set<string>>(new Set());
 
-  const loadNotifications = useCallback(async () => {
+  const loadNotifications = useCallback(async (options: { generateOverdue?: boolean } = {}) => {
     if (!projectId) {
       setBackendNotifications([]);
       setActivities([]);
@@ -80,6 +81,14 @@ export function NotificationsBell({ projectId, onNavigate }: NotificationsBellPr
     setLoading(true);
     setError(null);
     try {
+      if (options.generateOverdue && !generatedProjectIdsRef.current.has(projectId)) {
+        try {
+          await apiRequest(`/notifications/generate-overdue?projectId=${encodeURIComponent(projectId)}`, { method: "POST" });
+          generatedProjectIdsRef.current.add(projectId);
+        } catch {
+          // Existing notifications should still load even if generation fails.
+        }
+      }
       const [notificationsResponse, unreadResponse] = await Promise.all([
         apiRequest<{ notifications: BackendNotification[] }>(`/notifications?projectId=${encodeURIComponent(projectId)}`),
         apiRequest<{ count: number }>(`/notifications/unread-count?projectId=${encodeURIComponent(projectId)}`),
@@ -173,7 +182,7 @@ export function NotificationsBell({ projectId, onNavigate }: NotificationsBellPr
   function toggleOpen() {
     setOpen((current) => {
       const next = !current;
-      if (next) void loadNotifications();
+      if (next) void loadNotifications({ generateOverdue: true });
       return next;
     });
   }

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   createNotification,
+  generateOverdueActivityNotifications,
   getUnreadNotificationCount,
   listNotifications,
   markAllNotificationsRead,
@@ -16,6 +17,7 @@ notificationsRouter.post('/overdue-tasks/run', requireRole('admin', 'supervisor'
 
 export const userNotificationsRouter = Router();
 
+userNotificationsRouter.post('/generate-overdue', asyncHandler(generateOverdueActivityNotifications));
 userNotificationsRouter.get('/', asyncHandler(listNotifications));
 userNotificationsRouter.get('/unread-count', asyncHandler(getUnreadNotificationCount));
 userNotificationsRouter.post('/', asyncHandler(createNotification));
