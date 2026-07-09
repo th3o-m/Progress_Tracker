@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import {
   LayoutDashboard, ClipboardList, TrendingUp, PenLine,
-  BarChart3, Settings, Menu, X, ChevronRight, Bell, LogOut, FileSpreadsheet, ClipboardCheck, MonitorPlay,
+  BarChart3, Settings, Menu, X, ChevronRight, LogOut, FileSpreadsheet, ClipboardCheck, MonitorPlay,
 } from "lucide-react";
 import { Overview } from "./components/Overview";
 import { Login } from "./components/Login";
@@ -11,6 +11,7 @@ import { ProjectSwitcher, type ProjectMembership } from "./components/ProjectSwi
 import { ProjectDataProvider } from "./ProjectDataContext";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { Skeleton } from "./components/ui/skeleton";
+import { NotificationsBell } from "./components/NotificationsBell";
 
 const WorkPlan = lazy(() => import("./components/WorkPlan").then((module) => ({ default: module.WorkPlan })));
 const ProgressTracking = lazy(() => import("./components/ProgressTracking").then((module) => ({ default: module.ProgressTracking })));
@@ -332,10 +333,7 @@ export default function App() {
                 <option>Q2 2026</option>
               </select>
             </div>
-            <button className="relative p-2 rounded-md hover:bg-secondary transition-colors">
-              <Bell className="w-4 h-4 text-muted-foreground" />
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
-            </button>
+            <NotificationsBell projectId={selectedProjectId} onNavigate={() => setPage("workplan")} />
             {selectedMembership && (
               <button
                 type="button"
