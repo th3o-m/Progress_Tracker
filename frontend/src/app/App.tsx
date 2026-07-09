@@ -333,7 +333,7 @@ export default function App() {
                 <option>Q2 2026</option>
               </select>
             </div>
-            <NotificationsBell projectId={selectedProjectId} onNavigate={() => setPage("workplan")} />
+            <NotificationsBell projectId={selectedProjectId} onNavigate={(target) => setPage(target)} />
             {selectedMembership && (
               <button
                 type="button"

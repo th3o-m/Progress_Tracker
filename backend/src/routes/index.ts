@@ -8,11 +8,12 @@ import { progressRouter } from './progress.routes.js';
 import { projectsRouter } from './projects.routes.js';
 import { reportsRouter } from './reports.routes.js';
 import { reportImportsRouter } from './reportImports.routes.js';
-import { notificationsRouter } from './notifications.routes.js';
+import { notificationsRouter, userNotificationsRouter } from './notifications.routes.js';
 import { projectAccess } from '../middleware/projectAccess.js';
 
 export const apiRouter = Router();
 apiRouter.use('/users', usersRouter);
+apiRouter.use('/notifications', userNotificationsRouter);
 apiRouter.use('/projects', projectsRouter);
 apiRouter.use('/projects/:projectId/members', projectAccess, membersRouter);
 apiRouter.use('/projects/:projectId/activities', projectAccess, activitiesRouter);

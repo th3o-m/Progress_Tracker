@@ -72,6 +72,20 @@ export const updateReportImportReviewSchema = z.object({
   review_status: z.enum(['imported', 'under_review', 'corrected', 'approved']),
 }).strict();
 
+export const createNotificationSchema = z.object({
+  projectId: uuid,
+  type: text.max(100),
+  title: text.max(255),
+  message: text.max(2000),
+  entityType: nullableTextMax(100),
+  entityId: uuid.nullable().optional(),
+  severity: z.enum(['info', 'success', 'warning', 'error']).default('info'),
+}).strict();
+
+export const markAllNotificationsReadSchema = z.object({
+  projectId: uuid,
+}).strict();
+
 const projectSchema = z.object({
   name: text.max(255), description: optionalText, district: optionalText, sector: optionalText,
   start_date: date.nullable().optional(), end_date: date.nullable().optional(),
