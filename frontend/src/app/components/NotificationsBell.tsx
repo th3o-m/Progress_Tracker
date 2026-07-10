@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Bell, CheckCheck } from "lucide-react";
-import { apiRequest } from "../../lib/api";
+import { ApiRequestError, apiRequest } from "../../lib/api";
 import type { Activity } from "../ProjectDataContext";
 
 type NotificationTarget = "workplan" | "challenges";
@@ -59,6 +59,14 @@ function severityClasses(severity: string): string {
   return "bg-blue-100 text-blue-800";
 }
 
+function logNotificationRequestError(request: string, error: unknown) {
+  if (error instanceof ApiRequestError) {
+    console.error(`[Notifications] ${request} failed`, { status: error.status, message: error.message });
+    return;
+  }
+  console.error(`[Notifications] ${request} failed`, error);
+}
+
 export function NotificationsBell({ projectId, onNavigate }: NotificationsBellProps) {
   const [open, setOpen] = useState(false);
   const [backendNotifications, setBackendNotifications] = useState<BackendNotification[]>([]);
@@ -82,16 +90,26 @@ export function NotificationsBell({ projectId, onNavigate }: NotificationsBellPr
     setError(null);
     try {
       if (options.generateOverdue && !generatedProjectIdsRef.current.has(projectId)) {
+        const request = `POST /notifications/generate-overdue?projectId=${projectId}`;
         try {
           await apiRequest(`/notifications/generate-overdue?projectId=${encodeURIComponent(projectId)}`, { method: "POST" });
           generatedProjectIdsRef.current.add(projectId);
-        } catch {
+        } catch (requestError) {
+          logNotificationRequestError(request, requestError);
           // Existing notifications should still load even if generation fails.
         }
       }
+      const notificationsRequest = `GET /notifications?projectId=${projectId}`;
+      const unreadCountRequest = `GET /notifications/unread-count?projectId=${projectId}`;
       const [notificationsResponse, unreadResponse] = await Promise.all([
-        apiRequest<{ notifications: BackendNotification[] }>(`/notifications?projectId=${encodeURIComponent(projectId)}`),
-        apiRequest<{ count: number }>(`/notifications/unread-count?projectId=${encodeURIComponent(projectId)}`),
+        apiRequest<{ notifications: BackendNotification[] }>(`/notifications?projectId=${encodeURIComponent(projectId)}`).catch((requestError) => {
+          logNotificationRequestError(notificationsRequest, requestError);
+          throw requestError;
+        }),
+        apiRequest<{ count: number }>(`/notifications/unread-count?projectId=${encodeURIComponent(projectId)}`).catch((requestError) => {
+          logNotificationRequestError(unreadCountRequest, requestError);
+          throw requestError;
+        }),
       ]);
       const nextNotifications = notificationsResponse.notifications ?? [];
       setBackendNotifications(nextNotifications);
