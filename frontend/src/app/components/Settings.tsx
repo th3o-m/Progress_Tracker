@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
+  CalendarClock,
   Check,
+  Copy,
+  Link2,
   LoaderCircle,
   MailWarning,
   RefreshCw,
@@ -29,6 +32,16 @@ const permissions: Record<ProjectRole, string[]> = {
   finance: ["View project activities", "Submit expenses", "Review financial entries"],
   admin: ["Full project access", "Manage members and roles", "Manage all project records"],
 };
+
+interface ProjectInvitation {
+  id: string;
+  token: string;
+  role: ProjectRole;
+  status: "Pending" | "Accepted" | "Expired" | "Revoked";
+  expires_at: string;
+  expiresAt?: string;
+  invitationUrl: string;
+}
 
 function MembersSkeleton() {
   return <div className="grid gap-4 lg:grid-cols-2" aria-busy="true">{Array.from({ length: 4 }).map((_, index) => <article key={index} className="rounded-lg border border-border bg-card p-4 shadow-sm"><div className="flex items-start gap-3"><Skeleton className="h-10 w-10 rounded-full" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-1/2" /></div><Skeleton className="h-6 w-24 rounded-full" /></div><div className="mt-4 grid gap-3 sm:grid-cols-2"><Skeleton className="h-10" /><Skeleton className="h-10" /></div></article>)}</div>;
@@ -159,6 +172,12 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
   const [roleFilter, setRoleFilter] = useState<"all" | ProjectRole>("all");
   const [busy, setBusy] = useState<string | null>(null);
   const [remindersBusy, setRemindersBusy] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteRole, setInviteRole] = useState<ProjectRole>("officer");
+  const [inviteDays, setInviteDays] = useState(7);
+  const [invitation, setInvitation] = useState<ProjectInvitation | null>(null);
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -171,6 +190,8 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
     setRoleFilter("all");
     setError(null);
     setMessage(null);
+    setInvitation(null);
+    setInviteOpen(false);
   }, [projectId]);
 
   const filteredMembers = useMemo(() => {
@@ -275,6 +296,46 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
     }
   }
 
+  async function generateInvitation() {
+    if (inviteBusy) return;
+    setInviteBusy(true);
+    setError(null);
+    setCopied(false);
+    try {
+      const result = await apiRequest<ProjectInvitation>(`/projects/${projectId}/invitations`, {
+        method: "POST",
+        body: JSON.stringify({ role: inviteRole, expiresInDays: inviteDays }),
+      });
+      setInvitation(result);
+      setMessage("Invitation link generated.");
+    } catch (requestError) {
+      showError(requestError, "Unable to generate invitation link");
+    } finally {
+      setInviteBusy(false);
+    }
+  }
+
+  async function copyInvitation() {
+    if (!invitation?.invitationUrl) return;
+    await navigator.clipboard.writeText(invitation.invitationUrl);
+    setCopied(true);
+  }
+
+  async function revokeInvitation() {
+    if (!invitation || inviteBusy) return;
+    setInviteBusy(true);
+    setError(null);
+    try {
+      await apiRequest(`/invitations/${invitation.token}`, { method: "DELETE" });
+      setInvitation({ ...invitation, status: "Revoked" });
+      setMessage("Invitation link revoked.");
+    } catch (requestError) {
+      showError(requestError, "Unable to revoke invitation");
+    } finally {
+      setInviteBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="rounded-lg border border-border bg-card p-5 shadow-sm sm:p-6">
@@ -289,14 +350,81 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
             </div>
           </div>
           {canViewMembers && (
-            <button type="button" onClick={reloadMembers} disabled={Boolean(busy) || loading} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-secondary disabled:opacity-50">
-              <RefreshCw className={`h-3.5 w-3.5 ${busy === "refresh" || loading ? "animate-spin" : ""}`} />Refresh
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {canManage && (
+                <button type="button" onClick={() => setInviteOpen(true)} className="inline-flex items-center gap-2 rounded-md bg-[#1a3a6b] px-3 py-2 text-xs font-semibold text-white">
+                  <Link2 className="h-3.5 w-3.5" />Invite Member
+                </button>
+              )}
+              <button type="button" onClick={reloadMembers} disabled={Boolean(busy) || loading} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-secondary disabled:opacity-50">
+                <RefreshCw className={`h-3.5 w-3.5 ${busy === "refresh" || loading ? "animate-spin" : ""}`} />Refresh
+              </button>
+            </div>
           )}
         </div>
         {(error || projectDataError) && <div role="alert" className="mt-4 flex items-start justify-between gap-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"><span>{error || projectDataError}</span>{error && <button type="button" onClick={() => setError(null)} aria-label="Dismiss error"><X className="h-4 w-4" /></button>}</div>}
         {message && <div role="status" className="mt-4 flex items-start justify-between gap-3 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800"><span className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />{message}</span><button type="button" onClick={() => setMessage(null)} aria-label="Dismiss message"><X className="h-4 w-4" /></button></div>}
       </section>
+
+      {inviteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="invite-member-title">
+          <section className="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-lg">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 id="invite-member-title" className="flex items-center gap-2 font-semibold text-foreground"><Link2 className="h-4 w-4 text-[#1a3a6b]" />Invite Member</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Generate a project-specific link for a new member.</p>
+              </div>
+              <button type="button" onClick={() => setInviteOpen(false)} aria-label="Close invite modal" className="rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="text-xs font-medium text-muted-foreground">
+                Role
+                <select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as ProjectRole)} disabled={inviteBusy} className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground disabled:opacity-60">
+                  {roles.map((item) => <option key={item} value={item}>{roleLabel[item]}</option>)}
+                </select>
+              </label>
+              <label className="text-xs font-medium text-muted-foreground">
+                Expiration
+                <select value={inviteDays} onChange={(event) => setInviteDays(Number(event.target.value))} disabled={inviteBusy} className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground disabled:opacity-60">
+                  <option value={1}>1 day</option>
+                  <option value={7}>7 days</option>
+                  <option value={14}>14 days</option>
+                  <option value={30}>30 days</option>
+                  <option value={90}>90 days</option>
+                </select>
+              </label>
+            </div>
+
+            <button type="button" onClick={generateInvitation} disabled={inviteBusy} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#1a3a6b] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60">
+              {inviteBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+              {invitation ? "Generate new invite" : "Generate Invite"}
+            </button>
+
+            {invitation && (
+              <div className="mt-4 rounded-md border border-border bg-secondary/50 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="inline-flex items-center gap-1.5 font-semibold text-foreground"><CalendarClock className="h-3.5 w-3.5" />Expires {new Date(invitation.expiresAt ?? invitation.expires_at).toLocaleString()}</span>
+                  <span className="rounded-full bg-card px-2 py-0.5 font-semibold text-muted-foreground">{invitation.status}</span>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <input readOnly value={invitation.invitationUrl} className="min-w-0 flex-1 rounded-md border border-border bg-background px-3 py-2 text-xs text-foreground" />
+                  <button type="button" onClick={copyInvitation} disabled={invitation.status !== "Pending"} className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-card disabled:opacity-50">
+                    <Copy className="h-3.5 w-3.5" />{copied ? "Copied" : "Copy"}
+                  </button>
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <button type="button" onClick={revokeInvitation} disabled={inviteBusy || invitation.status !== "Pending"} className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">
+                    <X className="h-3.5 w-3.5" />Revoke link
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {roles.map((item) => (

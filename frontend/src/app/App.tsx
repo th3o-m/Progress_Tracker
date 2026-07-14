@@ -22,6 +22,7 @@ const ImportedDataReview = lazy(() => import("./components/ImportedDataReview").
 const Reports = lazy(() => import("./components/Reports").then((module) => ({ default: module.Reports })));
 const ProjectSettings = lazy(() => import("./components/Settings").then((module) => ({ default: module.Settings })));
 const ProjectPresentation = lazy(() => import("./pages/ProjectPresentation").then((module) => ({ default: module.ProjectPresentation })));
+const InvitationPage = lazy(() => import("./pages/InvitationPage").then((module) => ({ default: module.InvitationPage })));
 
 type Page = "home" | "workplan" | "progress" | "challenges" | "dataentry" | "import" | "review-imports" | "reports" | "settings";
 type Theme = "light" | "dark";
@@ -38,6 +39,11 @@ function projectIdFromUrl(): string | null {
 
 function presentationProjectIdFromPath(): string | null {
   const match = window.location.pathname.match(/^\/projects\/([^/]+)\/presentation\/?$/);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
+function invitationTokenFromPath(): string | null {
+  const match = window.location.pathname.match(/^\/invite\/([^/]+)\/?$/);
   return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
@@ -95,6 +101,7 @@ interface CurrentUserResponse {
 
 export default function App() {
   const presentationProjectId = presentationProjectIdFromPath();
+  const invitationToken = invitationTokenFromPath();
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [page, setPage] = useState<Page>("home");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -209,6 +216,14 @@ export default function App() {
     return (
       <Suspense fallback={<div className="min-h-screen bg-background p-8" aria-busy="true"><Skeleton className="mb-6 h-10 w-56" /><Skeleton className="h-[70vh] w-full" /></div>}>
         <ProjectPresentation projectId={presentationProjectId} />
+      </Suspense>
+    );
+  }
+
+  if (invitationToken) {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-background p-8" aria-busy="true"><Skeleton className="mx-auto mt-24 h-48 max-w-xl" /></div>}>
+        <InvitationPage token={invitationToken} onAccepted={loadProjects} />
       </Suspense>
     );
   }

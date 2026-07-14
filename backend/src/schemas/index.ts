@@ -103,6 +103,12 @@ export const createProjectSchema = projectSchema.extend({ source_project_id: uui
 export const updateProjectSchema = projectSchema.partial().refine((v) => Object.keys(v).length > 0, 'At least one field is required').refine((v) => !v.start_date || !v.end_date || v.end_date >= v.start_date, { path: ['end_date'], message: 'Must be on or after start_date' });
 export const addProjectMemberSchema = z.object({ email: z.string().trim().email().transform((v) => v.toLowerCase()), role: z.enum(roles), district: optionalText }).strict();
 export const updateProjectMemberSchema = z.object({ role: z.enum(roles).optional(), district: optionalText }).strict().refine((v) => Object.keys(v).length > 0, 'At least one field is required');
+export const createProjectInvitationSchema = z.object({
+  role: z.enum(roles).default('officer'),
+  expiresInDays: z.coerce.number().int().min(1).max(90).default(7),
+}).strict();
+
+export const invitationTokenSchema = z.string().trim().regex(/^[A-Fa-f0-9]{64,256}$/, 'Invalid invitation token');
 
 export const createProfileSchema = z.object({ email: z.string().trim().email().transform((v) => v.toLowerCase()), password: z.string().min(8), full_name: text.max(255), phone: optionalText, is_org_admin: z.boolean().default(false), active: z.boolean().default(true) }).strict();
 export const updateProfileSchema = z.object({ full_name: text.max(255).optional(), phone: optionalText, is_org_admin: z.boolean().optional(), active: z.boolean().optional() }).strict().refine((v) => Object.keys(v).length > 0, 'At least one field is required');
