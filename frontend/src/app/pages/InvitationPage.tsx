@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, LoaderCircle, LogIn, UserPlus, XCircle } from "lucide-react";
 import { apiRequest, ApiRequestError } from "../../lib/api";
 
@@ -12,6 +12,19 @@ interface InvitationDetails {
   manager: { name: string; email: string } | null;
 }
 
+export interface AcceptedInvitationProject {
+  id: string;
+  name: string;
+  role: string;
+}
+
+interface AcceptInvitationResponse {
+  success: boolean;
+  alreadyMember: boolean;
+  message: string;
+  project: AcceptedInvitationProject;
+}
+
 const roleLabel: Record<string, string> = {
   officer: "Member",
   supervisor: "Supervisor",
@@ -23,19 +36,20 @@ function messageForError(error: unknown): string {
   if (error instanceof ApiRequestError) {
     if (error.status === 410 && /expired/i.test(error.message)) return "This invitation has expired.";
     if (error.status === 410) return "This invitation is no longer valid.";
-    if (error.status === 409) return "This invitation has already been accepted.";
-    if (error.status === 404) return "Invitation not found.";
+    if (error.status === 409) return "You are already a member of this project.";
+    if (error.status === 404 || error.status === 400) return "This invitation link is invalid.";
     return error.message;
   }
   return error instanceof Error ? error.message : "Unable to load this invitation.";
 }
 
-export function InvitationPage({ token, onAccepted }: { token: string; onAccepted: (projectId?: string) => Promise<void> }) {
+export function InvitationPage({ token, onAccepted }: { token: string; onAccepted: (project: AcceptedInvitationProject) => Promise<void> }) {
   const [details, setDetails] = useState<InvitationDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [accepted, setAccepted] = useState(false);
+  const [acceptedProject, setAcceptedProject] = useState<AcceptedInvitationProject | null>(null);
+  const redirectTimer = useRef<number | null>(null);
 
   const loadInvitation = useCallback(async () => {
     setLoading(true);
@@ -51,18 +65,26 @@ export function InvitationPage({ token, onAccepted }: { token: string; onAccepte
   }, [token]);
 
   useEffect(() => { void loadInvitation(); }, [loadInvitation]);
+  useEffect(() => () => {
+    if (redirectTimer.current) window.clearTimeout(redirectTimer.current);
+  }, []);
 
   async function acceptInvitation() {
     if (joining || details?.alreadyMember) return;
     setJoining(true);
     setError(null);
     try {
-      const result = await apiRequest<{ success: boolean; alreadyMember: boolean; projectId?: string }>(`/invitations/${token}/accept`, { method: "POST" });
-      setAccepted(true);
-      await onAccepted(result.projectId);
+      const result = await apiRequest<AcceptInvitationResponse>(`/invitations/${token}/accept`, { method: "POST" });
+      setAcceptedProject(result.project);
+      redirectTimer.current = window.setTimeout(() => {
+        void onAccepted(result.project).catch((redirectError) => {
+          setError(redirectError instanceof Error ? redirectError.message : "Unable to open the dashboard.");
+          setAcceptedProject(null);
+          setJoining(false);
+        });
+      }, 900);
     } catch (requestError) {
       setError(messageForError(requestError));
-    } finally {
       setJoining(false);
     }
   }
@@ -73,7 +95,7 @@ export function InvitationPage({ token, onAccepted }: { token: string; onAccepte
         <div className="w-full rounded-lg border border-border bg-card p-6 shadow-sm sm:p-8">
           <div className="mb-6 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              {error ? <XCircle className="h-5 w-5" /> : accepted || details?.alreadyMember ? <CheckCircle2 className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
+              {error ? <XCircle className="h-5 w-5" /> : acceptedProject || details?.alreadyMember ? <CheckCircle2 className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
             </div>
             <div>
               <h1 className="font-bold text-foreground">Project invitation</h1>
@@ -91,8 +113,11 @@ export function InvitationPage({ token, onAccepted }: { token: string; onAccepte
             <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800">You are already a member of this project.</div>
           ) : details?.status === "Accepted" ? (
             <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">This invitation has already been accepted.</div>
-          ) : accepted ? (
-            <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800">You have joined this project.</div>
+          ) : acceptedProject ? (
+            <div className="space-y-3 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800">
+              <p>Successfully joined {acceptedProject.name}.</p>
+              <p className="flex items-center gap-2 text-emerald-700"><LoaderCircle className="h-4 w-4 animate-spin" />Redirecting to dashboard...</p>
+            </div>
           ) : details ? (
             <div className="space-y-5">
               <div>

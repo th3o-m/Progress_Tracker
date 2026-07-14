@@ -138,7 +138,14 @@ export async function acceptInvitation(req: Request, res: Response): Promise<voi
   const { data: existing, error: existingError } = await supabase.from('project_members').select('id, role').eq('project_id', invitation.project_id).eq('user_id', req.user.id).maybeSingle();
   throwDb(existingError);
   if (existing) {
-    res.json({ success: true, alreadyMember: true, membership: existing, invitation: invitationResponse(invitation, true) });
+    res.json({
+      success: true,
+      alreadyMember: true,
+      message: 'You are already a member of this project',
+      project: { id: invitation.project_id, name: project.name, role: existing.role },
+      membership: existing,
+      invitation: invitationResponse(invitation, true),
+    });
     return;
   }
 
@@ -158,7 +165,13 @@ export async function acceptInvitation(req: Request, res: Response): Promise<voi
     .eq('status', 'Pending');
   throwDb(updateError);
   await auditLog({ user_id: req.user.id, action: 'create', table_name: 'project_members', record_id: membership.id, details: { project_id: invitation.project_id, role: invitation.role, invitation_id: invitation.id } });
-  res.status(201).json({ success: true, alreadyMember: false, membership, projectId: invitation.project_id });
+  res.status(201).json({
+    success: true,
+    alreadyMember: false,
+    message: 'Successfully joined project',
+    project: { id: invitation.project_id, name: project.name, role: invitation.role },
+    membership,
+  });
 }
 
 export async function revokeInvitation(req: Request, res: Response): Promise<void> {

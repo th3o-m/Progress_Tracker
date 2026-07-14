@@ -12,6 +12,7 @@ import { ProjectDataProvider } from "./ProjectDataContext";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { Skeleton } from "./components/ui/skeleton";
 import { NotificationsBell } from "./components/NotificationsBell";
+import type { AcceptedInvitationProject } from "./pages/InvitationPage";
 
 const WorkPlan = lazy(() => import("./components/WorkPlan").then((module) => ({ default: module.WorkPlan })));
 const ProgressTracking = lazy(() => import("./components/ProgressTracking").then((module) => ({ default: module.ProgressTracking })));
@@ -114,6 +115,7 @@ export default function App() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [projectsLoading, setProjectsLoading] = useState(Boolean(supabase));
   const [projectError, setProjectError] = useState<string | null>(null);
+  const [newlyJoinedProjectId, setNewlyJoinedProjectId] = useState<string | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -176,9 +178,23 @@ export default function App() {
 
   function selectProject(projectId: string) {
     setSelectedProjectId(projectId);
+    if (projectId === newlyJoinedProjectId) setNewlyJoinedProjectId(null);
     sessionStorage.setItem("selectedProjectId", projectId);
     setPage("home");
   }
+
+  const handleInvitationAccepted = useCallback(async (project: AcceptedInvitationProject) => {
+    await loadProjects(project.id);
+    setNewlyJoinedProjectId(project.id);
+    setPage("home");
+    window.history.replaceState({}, document.title, "/");
+  }, [loadProjects]);
+
+  useEffect(() => {
+    if (!newlyJoinedProjectId) return;
+    const timeout = window.setTimeout(() => setNewlyJoinedProjectId(null), 10000);
+    return () => window.clearTimeout(timeout);
+  }, [newlyJoinedProjectId]);
 
   async function handleLogout() {
     if (signingOut) return;
@@ -223,7 +239,7 @@ export default function App() {
   if (invitationToken) {
     return (
       <Suspense fallback={<div className="min-h-screen bg-background p-8" aria-busy="true"><Skeleton className="mx-auto mt-24 h-48 max-w-xl" /></div>}>
-        <InvitationPage token={invitationToken} onAccepted={loadProjects} />
+        <InvitationPage token={invitationToken} onAccepted={handleInvitationAccepted} />
       </Suspense>
     );
   }
@@ -265,6 +281,7 @@ export default function App() {
               selectedProjectId={selectedProjectId}
               isOrgAdmin={isOrgAdmin}
               loading={projectsLoading}
+              newlyJoinedProjectId={newlyJoinedProjectId}
               onSelect={selectProject}
               onProjectsChanged={loadProjects}
             />

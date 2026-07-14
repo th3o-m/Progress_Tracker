@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { FolderPlus, Trash2, X } from "lucide-react";
+import { FolderPlus, Star, Trash2, X } from "lucide-react";
 import { apiRequest } from "../../lib/api";
 
 export interface Project {
@@ -31,11 +31,12 @@ interface ProjectSwitcherProps {
   selectedProjectId: string | null;
   isOrgAdmin: boolean;
   loading: boolean;
+  newlyJoinedProjectId?: string | null;
   onSelect: (projectId: string) => void;
   onProjectsChanged: (preferredProjectId?: string) => Promise<void>;
 }
 
-export function ProjectSwitcher({ memberships, selectedProjectId, isOrgAdmin, loading, onSelect, onProjectsChanged }: ProjectSwitcherProps) {
+export function ProjectSwitcher({ memberships, selectedProjectId, isOrgAdmin, loading, newlyJoinedProjectId, onSelect, onProjectsChanged }: ProjectSwitcherProps) {
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -103,7 +104,7 @@ export function ProjectSwitcher({ memberships, selectedProjectId, isOrgAdmin, lo
           {memberships.length === 0 && <option value="">No projects available</option>}
           {memberships.map((membership) => (
             <option key={membership.projects.id} value={membership.projects.id} className="text-slate-900">
-              {membership.projects.name}
+              {membership.projects.id === newlyJoinedProjectId ? `★ ${membership.projects.name} (New)` : membership.projects.name}
             </option>
           ))}
         </select>
@@ -118,7 +119,12 @@ export function ProjectSwitcher({ memberships, selectedProjectId, isOrgAdmin, lo
           </button>
         )}
       </div>
-      {selectedMembership && <p className="mt-1 truncate text-[10px] capitalize text-white/50">{selectedMembership.role} · {selectedMembership.district || "All districts"}</p>}
+      {selectedMembership && (
+        <p className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] capitalize text-white/50">
+          <span className="truncate">{selectedMembership.role} · {selectedMembership.district || "All districts"}</span>
+          {selectedMembership.projects.id === newlyJoinedProjectId && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/20 px-1.5 py-0.5 font-semibold text-emerald-100"><Star className="h-2.5 w-2.5 fill-current" />New</span>}
+        </p>
+      )}
       {error && !showCreate && <p className="mt-1 text-[10px] text-red-200">{error}</p>}
 
       {showCreate && (
