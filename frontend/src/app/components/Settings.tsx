@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { apiRequest } from "../../lib/api";
+import { supabase } from "../../lib/supabase";
 import { useProjectData, useProjectMembers, type ProjectMember, type ProjectRole } from "../ProjectDataContext";
 import { Skeleton } from "./ui/skeleton";
 
@@ -41,6 +42,24 @@ interface ProjectInvitation {
   expires_at: string;
   expiresAt?: string;
   invitationUrl: string;
+}
+
+interface OverdueReminderResult {
+  considered: number;
+  sent: number;
+  skipped: number;
+  failed: number;
+}
+
+interface OverdueReminderHistoryItem {
+  id: string;
+  task_id: string;
+  user_id: string;
+  email: string;
+  notification_type: "activity" | "challenge";
+  sent_at: string;
+  status: "sent" | "failed" | "skipped";
+  error_message: string | null;
 }
 
 function MembersSkeleton() {
@@ -163,6 +182,7 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
   const { projectId, role, refresh } = useProjectData();
   const { data: members, loading, error: projectDataError, refresh: refreshMembers } = useProjectMembers();
   const canManage = role === "admin";
+  const canSendReminders = role === "admin" || role === "supervisor";
   const canViewMembers = canManage;
   const [email, setEmail] = useState("");
   const [newRole, setNewRole] = useState<ProjectRole>("officer");
@@ -172,6 +192,9 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
   const [roleFilter, setRoleFilter] = useState<"all" | ProjectRole>("all");
   const [busy, setBusy] = useState<string | null>(null);
   const [remindersBusy, setRemindersBusy] = useState(false);
+  const [reminderStatus, setReminderStatus] = useState<"idle" | "sending" | "success" | "failure">("idle");
+  const [reminderHistory, setReminderHistory] = useState<OverdueReminderHistoryItem[]>([]);
+  const [reminderHistoryLoading, setReminderHistoryLoading] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteRole, setInviteRole] = useState<ProjectRole>("officer");
   const [inviteDays, setInviteDays] = useState(7);
@@ -190,9 +213,34 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
     setRoleFilter("all");
     setError(null);
     setMessage(null);
+    setReminderStatus("idle");
+    setReminderHistory([]);
     setInvitation(null);
     setInviteOpen(false);
   }, [projectId]);
+
+  async function loadReminderHistory(silent = false) {
+    if (!supabase || !canSendReminders) return;
+    setReminderHistoryLoading(true);
+    try {
+      const { data, error: historyError } = await supabase
+        .from("overdue_task_notifications")
+        .select("id, task_id, user_id, email, notification_type, sent_at, status, error_message")
+        .eq("project_id", projectId)
+        .order("sent_at", { ascending: false })
+        .limit(10);
+      if (historyError) throw historyError;
+      setReminderHistory((data ?? []) as OverdueReminderHistoryItem[]);
+    } catch (requestError) {
+      if (!silent) showError(requestError, "Unable to load reminder history");
+    } finally {
+      setReminderHistoryLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (canSendReminders) void loadReminderHistory();
+  }, [projectId, canSendReminders]);
 
   const filteredMembers = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -282,14 +330,22 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
   }
 
   async function sendOverdueReminders() {
-    if (remindersBusy) return;
+    if (remindersBusy || !supabase) return;
     setRemindersBusy(true);
+    setReminderStatus("sending");
     setError(null);
     setMessage(null);
     try {
-      const result = await apiRequest<{ considered: number; sent: number; skipped: number; failed: number }>(`/projects/${projectId}/notifications/overdue-tasks/run`, { method: "POST" });
+      const { data, error: invokeError } = await supabase.functions.invoke<OverdueReminderResult>("send-overdue-reminders", {
+        body: { projectId },
+      });
+      if (invokeError) throw invokeError;
+      const result = data ?? { considered: 0, sent: 0, skipped: 0, failed: 0 };
+      setReminderStatus("success");
       setMessage(`Overdue reminder check complete. Considered ${result.considered}, sent ${result.sent}, skipped ${result.skipped}, failed ${result.failed}.`);
+      await loadReminderHistory(true);
     } catch (requestError) {
+      setReminderStatus("failure");
       showError(requestError, "Unable to send overdue reminders");
     } finally {
       setRemindersBusy(false);
@@ -435,17 +491,58 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
         ))}
       </section>
 
-      {canManage && (
+      {canSendReminders && (
         <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h3 className="flex items-center gap-2 font-semibold text-foreground"><MailWarning className="h-4 w-4 text-[#1a3a6b]" />Overdue reminders</h3>
               <p className="mt-1 text-xs text-muted-foreground">Run the daily overdue task email check now.</p>
+              {reminderStatus !== "idle" && (
+                <p className={`mt-2 text-xs font-semibold ${reminderStatus === "failure" ? "text-red-700" : reminderStatus === "success" ? "text-green-700" : "text-muted-foreground"}`}>
+                  {reminderStatus === "sending" ? "Sending..." : reminderStatus === "success" ? "Success" : "Failure"}
+                </p>
+              )}
             </div>
             <button type="button" onClick={sendOverdueReminders} disabled={remindersBusy} className="inline-flex items-center gap-2 rounded-md bg-[#1a3a6b] px-4 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60">
               {remindersBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <MailWarning className="h-4 w-4" />}
-              Send overdue reminders now
+              {remindersBusy ? "Sending..." : "Send Reminder"}
             </button>
+          </div>
+          <div className="mt-5 overflow-hidden rounded-md border border-border">
+            <div className="flex items-center justify-between border-b border-border bg-secondary px-3 py-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Reminder history</span>
+              <button type="button" onClick={loadReminderHistory} disabled={reminderHistoryLoading} className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-foreground hover:bg-card disabled:cursor-wait disabled:opacity-60">
+                <RefreshCw className={`h-3.5 w-3.5 ${reminderHistoryLoading ? "animate-spin" : ""}`} />Refresh
+              </button>
+            </div>
+            {reminderHistory.length === 0 ? (
+              <p className="px-3 py-4 text-sm text-muted-foreground">{reminderHistoryLoading ? "Loading reminder history..." : "No reminder attempts logged yet."}</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-secondary/70 text-xs uppercase text-muted-foreground">
+                    <tr>
+                      <th className="px-3 py-2 text-left">Sent at</th>
+                      <th className="px-3 py-2 text-left">Email</th>
+                      <th className="px-3 py-2 text-left">Type</th>
+                      <th className="px-3 py-2 text-left">Status</th>
+                      <th className="px-3 py-2 text-left">Error</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reminderHistory.map((item) => (
+                      <tr key={item.id} className="border-t border-border">
+                        <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{new Date(item.sent_at).toLocaleString()}</td>
+                        <td className="px-3 py-2">{item.email}</td>
+                        <td className="px-3 py-2 capitalize">{item.notification_type}</td>
+                        <td className="px-3 py-2 capitalize">{item.status}</td>
+                        <td className="max-w-xs truncate px-3 py-2 text-xs text-muted-foreground" title={item.error_message ?? ""}>{item.error_message ?? "None"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </section>
       )}

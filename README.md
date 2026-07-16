@@ -260,3 +260,19 @@ Instead of manually preparing slides from project data, users can open a clean f
 
 ```txt
 /projects/:projectId/presentation
+```
+
+---
+
+## Environment Variables
+
+### Supabase Edge Function Secrets
+
+The overdue reminder Edge Function reads email configuration from Supabase secrets. Set these before deploying or invoking `send-overdue-reminders`:
+
+```bash
+supabase secrets set RESEND_API_KEY=your_resend_api_key
+supabase secrets set FROM_EMAIL="Project Tracker <noreply@example.com>"
+```
+
+Do not commit API keys or hardcode provider credentials. The function also relies on the standard Supabase Edge runtime secrets for `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`.
