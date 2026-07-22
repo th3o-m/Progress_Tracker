@@ -25,8 +25,9 @@ export async function getActivity(req: Request, res: Response): Promise<void> {
 
 export async function createActivity(req: Request, res: Response): Promise<void> {
   const body = parseBody(createActivitySchema, req.body);
-  await assertMemberOfProject(req.context.projectId, body.responsible_officer);
-  const { data, error } = await supabase.from('activities').insert({ ...body, project_id: req.context.projectId }).select().single(); throwDb(error);
+  const responsibleOfficer = typeof body.responsible_officer === 'string' ? body.responsible_officer : null;
+  if (responsibleOfficer) await assertMemberOfProject(req.context.projectId, responsibleOfficer);
+  const { data, error } = await supabase.from('activities').insert({ ...body, responsible_officer: responsibleOfficer, project_id: req.context.projectId }).select().single(); throwDb(error);
   await auditLog({ user_id: req.user.id, action: 'create', table_name: 'activities', record_id: data.id, details: { ...body, project_id: req.context.projectId } });
   res.status(201).json(data);
 }
@@ -39,8 +40,9 @@ export async function updateActivity(req: Request, res: Response): Promise<void>
     const forbidden = Object.keys(body).some((key) => !['status', 'progress_pct'].includes(key));
     if (forbidden) throw new ApiError(403, 'Officers may only update status and progress_pct');
   }
-  if (body.responsible_officer) await assertMemberOfProject(req.context.projectId, body.responsible_officer);
-  const { data, error } = await supabase.from('activities').update({ ...body, updated_at: new Date().toISOString() }).eq('id', current.id).eq('project_id', req.context.projectId).select().single(); throwDb(error);
+  const responsibleOfficer = typeof body.responsible_officer === 'string' ? body.responsible_officer : null;
+  if (responsibleOfficer) await assertMemberOfProject(req.context.projectId, responsibleOfficer);
+  const { data, error } = await supabase.from('activities').update({ ...body, responsible_officer: responsibleOfficer, updated_at: new Date().toISOString() }).eq('id', current.id).eq('project_id', req.context.projectId).select().single(); throwDb(error);
   await auditLog({ user_id: req.user.id, action: 'update', table_name: 'activities', record_id: data.id, details: { ...body, project_id: req.context.projectId } });
   res.json(data);
 }

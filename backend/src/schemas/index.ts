@@ -14,9 +14,12 @@ const nullableProgress = z.preprocess((value) => value === '' ? null : value, pr
 const optionalJsonArray = z.preprocess((value) => value ?? [], z.array(z.unknown()).default([]));
 const importId = uuid.nullable().optional();
 
+const optionalUuid = z.preprocess((value) => value === '' ? null : value, uuid.nullable().optional());
+
 const activitySchema = z.object({
-  code: text.max(50), name: text.max(255), category: text.max(100), district: text.max(100),
-  responsible_officer: uuid, start_date: date, end_date: date, status: text.max(50), progress_pct: progress.default(0),
+  code: z.preprocess((value) => typeof value === 'string' && value.trim() === '' ? null : value, z.string().trim().min(1).max(50).nullable().optional()),
+  name: text.max(255), category: text.max(100), district: text.max(100),
+  responsible_officer: optionalUuid, start_date: date, end_date: date, status: text.max(50), progress_pct: progress.default(0),
   import_id: importId, description: nullableText, status_color: nullableTextMax(50), remarks: nullableText, actual_completion_date: nullableDate,
 }).strict();
 export const createActivitySchema = activitySchema.refine((v) => v.end_date >= v.start_date, { path: ['end_date'], message: 'Must be on or after start_date' });

@@ -42,7 +42,7 @@ export function DataEntry({ memberships = [] }: { memberships?: ProjectMembershi
     const base = `/projects/${projectId}`;
     let path = ""; let body: Record<string, unknown> = {};
     if (tab === "activity") {
-      path = `${base}/activities`; body = { code: form.code, name: form.name, category: form.category, district: form.district, responsible_officer: form.responsibleOfficer, start_date: form.startDate, end_date: form.endDate, status: form.status, progress_pct: Number(form.progressPct) };
+      path = `${base}/activities`; body = { code: form.code || null, name: form.name, category: form.category, district: form.district, responsible_officer: form.responsibleOfficer || null, start_date: form.startDate, end_date: form.endDate, status: form.status, progress_pct: Number(form.progressPct) };
     } else if (tab === "progress") {
       path = `${base}/progress-updates`; body = { activity_id: form.activityId, progress_pct: Number(form.progressPct), status: form.status, narrative: form.narrative, report_date: form.reportDate };
     } else if (tab === "challenge") {
@@ -83,11 +83,11 @@ export function DataEntry({ memberships = [] }: { memberships?: ProjectMembershi
       ) : (
       <form onSubmit={submit} className="space-y-5 p-6">
         {tab === "activity" && <div className="grid grid-cols-2 gap-4">
-          <label className="text-sm">Code *<input required value={form.code} onChange={(e) => set("code", e.target.value)} className={input} /></label>
+          <label className="text-sm">Code (optional)<input value={form.code} onChange={(e) => set("code", e.target.value)} className={input} /></label>
           <label className="text-sm">Name *<input required value={form.name} onChange={(e) => set("name", e.target.value)} className={input} /></label>
           <label className="text-sm">Category *<input required value={form.category} onChange={(e) => set("category", e.target.value)} className={input} /></label>
           <label className="text-sm">District *<input required value={form.district} onChange={(e) => set("district", e.target.value)} className={input} /></label>
-          <label className="text-sm">Responsible officer *<select required value={form.responsibleOfficer} onChange={(e) => set("responsibleOfficer", e.target.value)} className={input}><option value="">Select officer...</option>{members.filter((m) => m.role === "officer" && m.profiles?.active).map((m) => <option key={m.id} value={m.profiles!.id}>{m.profiles!.full_name}</option>)}</select></label>
+          <label className="text-sm">Responsible officer (optional)<select value={form.responsibleOfficer} onChange={(e) => set("responsibleOfficer", e.target.value)} className={input}><option value="">Select officer...</option>{members.filter((m) => m.role === "officer" && m.profiles?.active).map((m) => <option key={m.id} value={m.profiles!.id}>{m.profiles!.full_name}</option>)}</select></label>
           <label className="text-sm">Status *<select required value={form.status} onChange={(e) => set("status", e.target.value)} className={input}><option value="">Select...</option><option>Not Started</option><option>In Progress</option><option>Completed</option><option>On Hold</option></select></label>
           <label className="text-sm">Start date *<input type="date" required value={form.startDate} onChange={(e) => set("startDate", e.target.value)} className={input} /></label>
           <label className="text-sm">End date *<input type="date" required value={form.endDate} onChange={(e) => set("endDate", e.target.value)} className={input} /></label>
