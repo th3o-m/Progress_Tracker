@@ -28,9 +28,6 @@ export const updateProgressSchema = createProgressSchema.omit({ activity_id: tru
 export const createChallengeSchema = z.object({ activity_id: uuid, challenge_type: text.max(100), description: text, mitigation_plan: optionalText, resolved: z.boolean().default(false), import_id: importId, status_color: nullableTextMax(50), responsible_officer: importId, due_date: nullableDate }).strict();
 export const updateChallengeSchema = createChallengeSchema.omit({ activity_id: true }).partial().refine((v) => Object.keys(v).length > 0, 'At least one field is required');
 
-export const createBeneficiarySchema = z.object({ full_name: text.max(255), national_id: text.max(100), beneficiary_type: text.max(100), district: text.max(100), contact_number: optionalText, notes: optionalText }).strict();
-export const updateBeneficiarySchema = createBeneficiarySchema.partial().refine((v) => Object.keys(v).length > 0, 'At least one field is required');
-
 export const createFinancialSchema = z.object({ activity_id: uuid, expense_category: text.max(100), amount: z.coerce.number().nonnegative().multipleOf(0.01), description: text, receipt_url: z.string().url().nullable().optional(), import_id: importId, approved_budget: nullableNumber.refine((value) => value == null || value >= 0, 'Number must be greater than or equal to 0'), balance: nullableNumber, percentage_utilised: nullableNumber, remarks: nullableText }).strict();
 export const updateFinancialSchema = createFinancialSchema.partial().refine((v) => Object.keys(v).length > 0, 'At least one field is required');
 export const decisionSchema = z.object({ reason: z.string().trim().max(1000).optional() }).strict();

@@ -7,9 +7,9 @@ import { ImportSpreadsheet } from "./ImportSpreadsheet";
 import { Skeleton } from "./ui/skeleton";
 import type { ProjectMembership } from "./ProjectSwitcher";
 
-type Tab = "activity" | "progress" | "challenge" | "beneficiary" | "financial" | "import";
+type Tab = "activity" | "progress" | "challenge" | "financial" | "import";
 const today = new Date().toISOString().slice(0, 10);
-const blank = { activityId: "", code: "", name: "", category: "", district: "", responsibleOfficer: "", startDate: today, endDate: today, status: "", progressPct: "0", narrative: "", reportDate: today, challengeType: "", challengeDesc: "", mitigationPlan: "", beneficiaryName: "", nationalId: "", beneficiaryType: "", contactNumber: "", amount: "", expenseCategory: "", description: "" };
+const blank = { activityId: "", code: "", name: "", category: "", district: "", responsibleOfficer: "", startDate: today, endDate: today, status: "", progressPct: "0", narrative: "", reportDate: today, challengeType: "", challengeDesc: "", mitigationPlan: "", amount: "", expenseCategory: "", description: "" };
 
 function EntryFormSkeleton() {
   return <div className="space-y-5 p-6" aria-busy="true">
@@ -30,7 +30,7 @@ export function DataEntry({ memberships = [] }: { memberships?: ProjectMembershi
   const [error, setError] = useState<string | null>(null);
   const tabs = useMemo(() => [
     ...(canCreateActivity ? [{ id: "activity" as Tab, label: "New Activity" }] : []),
-    ...(role !== "finance" ? [{ id: "progress" as Tab, label: "Activity Progress" }, { id: "challenge" as Tab, label: "Challenge" }, { id: "beneficiary" as Tab, label: "Beneficiary" }] : []),
+    ...(role !== "finance" ? [{ id: "progress" as Tab, label: "Activity Progress" }, { id: "challenge" as Tab, label: "Challenge" }] : []),
     { id: "financial" as Tab, label: "Financial Entry" },
     ...(canCreateActivity ? [{ id: "import" as Tab, label: "Import Spreadsheet" }] : []),
   ], [canCreateActivity, role]);
@@ -47,8 +47,6 @@ export function DataEntry({ memberships = [] }: { memberships?: ProjectMembershi
       path = `${base}/progress-updates`; body = { activity_id: form.activityId, progress_pct: Number(form.progressPct), status: form.status, narrative: form.narrative, report_date: form.reportDate };
     } else if (tab === "challenge") {
       path = `${base}/challenges`; body = { activity_id: form.activityId, challenge_type: form.challengeType, description: form.challengeDesc, mitigation_plan: form.mitigationPlan || null, resolved: false };
-    } else if (tab === "beneficiary") {
-      path = `${base}/beneficiaries`; body = { full_name: form.beneficiaryName, national_id: form.nationalId, beneficiary_type: form.beneficiaryType, district: form.district, contact_number: form.contactNumber || null, notes: null };
     } else {
       path = `${base}/financial-entries`; body = { activity_id: form.activityId, expense_category: form.expenseCategory, amount: Number(form.amount), description: form.description, receipt_url: null };
     }
@@ -80,7 +78,7 @@ export function DataEntry({ memberships = [] }: { memberships?: ProjectMembershi
         <div className="p-6"><ImportSpreadsheet memberships={memberships} /></div>
       ) : (activitiesLoading || (tab === "activity" && canCreateActivity && membersLoading)) ? (
         <EntryFormSkeleton />
-      ) : tab !== "activity" && tab !== "beneficiary" && activities.length === 0 ? (
+      ) : tab !== "activity" && activities.length === 0 ? (
         <div className="p-6"><EmptyState message="Create an activity before entering activity-linked data." /></div>
       ) : (
       <form onSubmit={submit} className="space-y-5 p-6">
@@ -96,7 +94,6 @@ export function DataEntry({ memberships = [] }: { memberships?: ProjectMembershi
         </div>}
         {tab === "progress" && <div className="space-y-4">{activitySelect}<label className="block text-sm">Progress: {form.progressPct}%<input type="range" min="0" max="100" value={form.progressPct} onChange={(e) => set("progressPct", e.target.value)} className="mt-2 w-full" /></label><label className="block text-sm">Status *<select required value={form.status} onChange={(e) => set("status", e.target.value)} className={input}><option value="">Select...</option><option>Not Started</option><option>In Progress</option><option>Completed</option><option>On Hold</option></select></label><label className="block text-sm">Narrative *<textarea required rows={4} value={form.narrative} onChange={(e) => set("narrative", e.target.value)} className={input} /></label><label className="block text-sm">Report date *<input type="date" required value={form.reportDate} onChange={(e) => set("reportDate", e.target.value)} className={input} /></label></div>}
         {tab === "challenge" && <div className="space-y-4">{activitySelect}<label className="block text-sm">Challenge type *<input required value={form.challengeType} onChange={(e) => set("challengeType", e.target.value)} className={input} /></label><label className="block text-sm">Description *<textarea required rows={4} value={form.challengeDesc} onChange={(e) => set("challengeDesc", e.target.value)} className={input} /></label><label className="block text-sm">Mitigation plan<textarea rows={3} value={form.mitigationPlan} onChange={(e) => set("mitigationPlan", e.target.value)} className={input} /></label></div>}
-        {tab === "beneficiary" && <div className="grid grid-cols-2 gap-4"><label className="text-sm">Full name *<input required value={form.beneficiaryName} onChange={(e) => set("beneficiaryName", e.target.value)} className={input} /></label><label className="text-sm">National ID *<input required value={form.nationalId} onChange={(e) => set("nationalId", e.target.value)} className={input} /></label><label className="text-sm">Type *<input required value={form.beneficiaryType} onChange={(e) => set("beneficiaryType", e.target.value)} className={input} /></label><label className="text-sm">District *<input required value={form.district} onChange={(e) => set("district", e.target.value)} className={input} /></label><label className="col-span-2 text-sm">Contact number<input value={form.contactNumber} onChange={(e) => set("contactNumber", e.target.value)} className={input} /></label></div>}
         {tab === "financial" && <div className="space-y-4">{activitySelect}<div className="grid grid-cols-2 gap-4"><label className="text-sm">Expense category *<input required value={form.expenseCategory} onChange={(e) => set("expenseCategory", e.target.value)} className={input} /></label><label className="text-sm">Amount (BWP) *<input type="number" min="0.01" step="0.01" required value={form.amount} onChange={(e) => set("amount", e.target.value)} className={input} /></label></div><label className="block text-sm">Description *<textarea required rows={3} value={form.description} onChange={(e) => set("description", e.target.value)} className={input} /></label></div>}
         <div className="flex justify-end gap-3"><button type="button" onClick={() => setForm(blank)} className="rounded-md border border-border px-4 py-2 text-sm font-semibold">Clear</button><button type="submit" disabled={submitting} className="rounded-md bg-[#1a3a6b] px-6 py-2 text-sm font-semibold text-white disabled:opacity-60">{submitting ? "Saving..." : "Save Entry"}</button></div>
       </form>

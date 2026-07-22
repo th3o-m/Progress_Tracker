@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { AlertTriangle, ArrowRight, CheckCircle2, Clock, ListTodo, Users } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Clock, ListTodo } from "lucide-react";
 import { apiRequest } from "../../lib/api";
 import { EmptyState } from "./EmptyState";
 import { Skeleton } from "./ui/skeleton";
@@ -14,7 +14,6 @@ interface ProjectSummary {
   notStartedActivities: number;
   overdueActivities: number;
   unresolvedChallenges: number;
-  totalBeneficiaries: number;
   totalBudget: number;
   totalSpent: number;
   averageProgress: number;
@@ -31,7 +30,6 @@ const emptySummary: ProjectSummary = {
   notStartedActivities: 0,
   overdueActivities: 0,
   unresolvedChallenges: 0,
-  totalBeneficiaries: 0,
   totalBudget: 0,
   totalSpent: 0,
   averageProgress: 0,
@@ -83,7 +81,6 @@ export function Overview({ projectId, onViewChallenges }: { projectId: string; o
     { label: "Completed", value: completed, icon: CheckCircle2, color: "text-green-700", bg: "bg-green-50" },
     { label: "In Progress", value: inProgress, icon: Clock, color: "text-cyan-700", bg: "bg-cyan-50" },
     { label: "Open Challenges", value: unresolved, icon: AlertTriangle, color: "text-red-700", bg: "bg-red-50", onClick: onViewChallenges },
-    { label: "Beneficiaries", value: summary.totalBeneficiaries, icon: Users, color: "text-violet-700", bg: "bg-violet-50" },
   ];
 
   if (loading) return <OverviewSkeleton />;

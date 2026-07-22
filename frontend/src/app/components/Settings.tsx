@@ -28,7 +28,7 @@ const roleLabel: Record<ProjectRole, string> = {
   admin: "Project Manager",
 };
 const permissions: Record<ProjectRole, string[]> = {
-  officer: ["View district-scoped data", "Submit project updates", "Register beneficiaries"],
+  officer: ["View district-scoped data", "Submit project updates"],
   supervisor: ["View all project operations", "Create activities", "Generate reports"],
   finance: ["View project activities", "Submit expenses", "Review financial entries"],
   admin: ["Full project access", "Manage members and roles", "Manage all project records"],

@@ -1,6 +1,6 @@
 # Progress Tracker
 
-A full-stack **Project Monitoring and Evaluation Platform** designed to help teams manage projects, track implementation progress, monitor activities, record challenges, manage beneficiaries, review financial data, import spreadsheet records, generate reports, and present project insights through a professional **Presentation Mode**.
+A full-stack **Project Monitoring and Evaluation Platform** designed to help teams manage projects, track implementation progress, monitor activities, record challenges, review financial data, import spreadsheet records, generate reports, and present project insights through a professional **Presentation Mode**.
 
 The platform is built for organizations that need a structured way to monitor multiple projects, improve reporting accuracy, and present progress updates clearly during meetings, reviews, and online presentations.
 
@@ -38,7 +38,7 @@ The system allows users to:
 
 - Create and manage projects.
 - Track project activities and progress.
-- Record updates, challenges, beneficiaries, and financial entries.
+- Record updates, challenges, and financial entries.
 - Import structured data from spreadsheets.
 - Review and edit imported records.
 - Generate project reports.
@@ -76,7 +76,6 @@ It includes:
 - Activity progress indicators.
 - Recent updates.
 - Challenge summaries.
-- Beneficiary statistics.
 - Financial highlights.
 - Project status overview.
 
@@ -134,22 +133,7 @@ This improves accountability and helps management understand what is blocking im
 
 ---
 
-### 6. Beneficiary Management
-
-The system supports beneficiary tracking for project impact reporting.
-
-Users can capture:
-
-- Beneficiary records.
-- Beneficiary categories or types.
-- Totals by group.
-- Project-level beneficiary summaries.
-
-This is useful for impact reports, donor reporting, government reporting, and executive presentations.
-
----
-
-### 7. Financial Tracking
+### 6. Financial Tracking
 
 The platform includes financial tracking functionality for project monitoring.
 
@@ -167,7 +151,7 @@ This helps teams connect financial performance with implementation progress.
 
 ---
 
-### 8. Spreadsheet Import System
+### 7. Spreadsheet Import System
 
 The platform includes a spreadsheet import feature to reduce manual data entry.
 
@@ -186,7 +170,7 @@ This feature is useful when project data already exists in Excel files and needs
 
 ---
 
-### 9. Editable Imported Data Review
+### 8. Editable Imported Data Review
 
 After importing spreadsheet data, users can review and correct records inside the platform.
 
@@ -199,7 +183,7 @@ This helps ensure:
 
 ---
 
-### 10. Reports and Exports
+### 9. Reports and Exports
 
 The platform supports report generation and export functionality.
 
@@ -216,7 +200,7 @@ The backend includes report-generation support for structured project reporting.
 
 ---
 
-### 11. Email Notifications
+### 10. Email Notifications
 
 The platform includes an overdue task notification system.
 
@@ -230,7 +214,7 @@ The notification system is designed to improve follow-up and reduce missed deadl
 
 ---
 
-### 12. Role-Based Access Control
+### 11. Role-Based Access Control
 
 The platform supports project-level access control.
 

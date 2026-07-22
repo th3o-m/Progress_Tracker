@@ -114,12 +114,6 @@ export async function getProjectSummary(req: Request, res: Response): Promise<vo
     .eq('resolved', false);
   challengesQuery = applyReadScope(challengesQuery, req, 'officer_id');
 
-  let beneficiariesQuery = supabase
-    .from('beneficiaries')
-    .select('id', { count: 'exact', head: true })
-    .eq('project_id', req.context.projectId);
-  beneficiariesQuery = applyReadScope(beneficiariesQuery, req);
-
   let financialQuery = supabase
     .from('financial_entries')
     .select('amount, status, submitted_by')
@@ -138,7 +132,6 @@ export async function getProjectSummary(req: Request, res: Response): Promise<vo
     progressResult,
     recentProgressResult,
     challengesResult,
-    beneficiariesResult,
     financialResult,
     projectResult,
   ] = await Promise.all([
@@ -147,7 +140,6 @@ export async function getProjectSummary(req: Request, res: Response): Promise<vo
     req.context.roleInProject === 'finance' ? Promise.resolve({ data: [], error: null }) : progressQuery,
     req.context.roleInProject === 'finance' ? Promise.resolve({ data: [], error: null }) : recentProgressQuery,
     req.context.roleInProject === 'finance' ? Promise.resolve({ count: 0, error: null }) : challengesQuery,
-    req.context.roleInProject === 'finance' ? Promise.resolve({ count: 0, error: null }) : beneficiariesQuery,
     financialQuery,
     projectQuery,
   ]);
@@ -157,7 +149,6 @@ export async function getProjectSummary(req: Request, res: Response): Promise<vo
   throwDb(progressResult.error);
   throwDb(recentProgressResult.error);
   throwDb(challengesResult.error);
-  throwDb(beneficiariesResult.error);
   throwDb(financialResult.error);
   throwDb(projectResult.error);
 
@@ -193,7 +184,6 @@ export async function getProjectSummary(req: Request, res: Response): Promise<vo
     notStartedActivities,
     overdueActivities,
     unresolvedChallenges: challengesResult.count ?? 0,
-    totalBeneficiaries: beneficiariesResult.count ?? 0,
     totalBudget: Number(projectResult.data?.allocated_budget ?? projectResult.data?.estimated_budget ?? 0),
     totalSpent: sum(financialEntries, 'amount'),
     averageProgress,
@@ -233,10 +223,6 @@ export async function getProjectPresentation(req: Request, res: Response): Promi
   challengesQuery = applyReadScope(challengesQuery, req, 'officer_id');
   const { data: challengesData, error: challengesError } = await challengesQuery; throwDb(challengesError);
 
-  let beneficiariesQuery = supabase.from('beneficiaries').select('id, beneficiary_type, district').eq('project_id', req.context.projectId);
-  beneficiariesQuery = applyReadScope(beneficiariesQuery, req);
-  const { data: beneficiariesData, error: beneficiariesError } = await beneficiariesQuery; throwDb(beneficiariesError);
-
   let financialQuery = supabase.from('financial_entries').select('id, amount, approved_budget, balance, status, submitted_by').eq('project_id', req.context.projectId);
   financialQuery = applyReadScope(financialQuery, req, 'submitted_by');
   const { data: financialData, error: financialError } = await financialQuery; throwDb(financialError);
@@ -244,7 +230,6 @@ export async function getProjectPresentation(req: Request, res: Response): Promi
   const activities = activitiesData ?? [];
   const progressUpdates = progressData ?? [];
   const challenges = challengesData ?? [];
-  const beneficiaries = beneficiariesData ?? [];
   const financialEntries = financialData ?? [];
   const totalActivities = activities.length;
   const completedActivities = countByStatus(activities, ['completed', 'complete']);
@@ -264,12 +249,6 @@ export async function getProjectPresentation(req: Request, res: Response): Promi
     unresolvedChallenges.length > 0 ? `Resolve or update mitigation plans for ${unresolvedChallenges.length} open challenge${unresolvedChallenges.length === 1 ? '' : 's'}.` : null,
     incompleteActivities.length > 0 ? `Continue implementation for ${incompleteActivities.length} incomplete activity${incompleteActivities.length === 1 ? '' : 'ies'}.` : null,
   ].filter((value): value is string => Boolean(value));
-
-  const byCategory = Array.from(beneficiaries.reduce((map, row) => {
-    const label = firstText(row.beneficiary_type, 'Unspecified') ?? 'Unspecified';
-    map.set(label, (map.get(label) ?? 0) + 1);
-    return map;
-  }, new Map<string, number>())).map(([label, value]) => ({ label, value }));
 
   const response = {
     project: {
@@ -302,7 +281,6 @@ export async function getProjectPresentation(req: Request, res: Response): Promi
       mitigation: challenge.mitigation_plan ?? null,
       status: challenge.resolved ? 'Resolved' : 'Unresolved',
     })),
-    beneficiariesSummary: { totalBeneficiaries: beneficiaries.length, byCategory },
     financialSummary: {
       totalBudget: Number(project.allocated_budget ?? project.estimated_budget ?? 0),
       totalSpent: sum(financialEntries, 'amount'),

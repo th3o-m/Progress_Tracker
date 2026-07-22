@@ -5,7 +5,6 @@ export interface ReportData {
   activities: Record<string, any>[];
   progress_updates: Record<string, any>[];
   challenges: Record<string, any>[];
-  beneficiaries: Record<string, any>[];
   financial_entries: Record<string, any>[];
 }
 
@@ -24,7 +23,7 @@ export async function buildExcel(data: ReportData, start: string, end: string): 
     ['Projectt Tracker Monitoring Report'],
     ['Period', `${start} to ${end}`],
     ['Activities', data.activities.length], ['Progress updates', data.progress_updates.length],
-    ['Challenges', data.challenges.length], ['Beneficiaries', data.beneficiaries.length],
+    ['Challenges', data.challenges.length],
     ['Financial entries', data.financial_entries.length],
   ]);
   summary.getRow(1).font = { bold: true, size: 16 };
