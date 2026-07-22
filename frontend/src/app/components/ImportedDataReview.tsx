@@ -21,7 +21,7 @@ type ImportHistory = {
   raw_preview_json?: RawPreviewJson | null;
 };
 type ProjectRecord = {
-  id: string; name: string; description: string | null; project_code: string | null; project_manager: string | null;
+  id: string; name: string; description: string | null; objectives: string | null; project_code: string | null; project_manager: string | null;
   planned_start_date: string | null; actual_start_date: string | null; planned_completion_date: string | null; actual_completion_date: string | null;
   estimated_budget: number | null; allocated_budget: number | null; district?: string | null;
 };
@@ -278,6 +278,7 @@ export function ImportedDataReview() {
       await apiRequest(`/projects/${projectId}`, { method: "PATCH", body: JSON.stringify({
         name: draft.project.name,
         description: draft.project.description,
+        objectives: draft.project.objectives,
         project_code: draft.project.project_code,
         project_manager: draft.project.project_manager,
         planned_start_date: draft.project.planned_start_date,
@@ -537,6 +538,7 @@ export function ImportedDataReview() {
                 <Field label="Actual completion date" type="date" value={text(draft.project.actual_completion_date)} onChange={(value) => updateProject({ actual_completion_date: emptyToNull(value) })} />
                 <Field label="Estimated budget" type="number" value={numberField(draft.project.estimated_budget)} onChange={(value) => updateProject({ estimated_budget: money(value) })} />
                 <Field label="Allocated budget" type="number" value={numberField(draft.project.allocated_budget)} onChange={(value) => updateProject({ allocated_budget: money(value) })} />
+                <label className="text-xs font-medium text-muted-foreground md:col-span-2">Project objectives<textarea value={text(draft.project.objectives)} onChange={(event) => updateProject({ objectives: emptyToNull(event.target.value) })} rows={3} className={`${inputClass} mt-1`} /></label>
                 <label className="text-xs font-medium text-muted-foreground md:col-span-2">Project overview/description<textarea value={text(draft.project.description)} onChange={(event) => updateProject({ description: emptyToNull(event.target.value) })} rows={3} className={`${inputClass} mt-1`} /></label>
               </div>
             </section>

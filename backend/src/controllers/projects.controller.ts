@@ -9,7 +9,7 @@ export async function listProjects(req: Request, res: Response): Promise<void> {
   const pagination = getPagination(req);
   let query = supabase
     .from('project_members')
-    .select('role, district, added_at, projects(id,name,description,district,sector,start_date,end_date,status,created_by,created_at,project_code,project_manager,planned_start_date,actual_start_date,planned_completion_date,actual_completion_date,estimated_budget,allocated_budget)', pagination ? { count: 'exact' } : undefined)
+    .select('role, district, added_at, projects(id,name,description,objectives,district,sector,start_date,end_date,status,created_by,created_at,project_code,project_manager,planned_start_date,actual_start_date,planned_completion_date,actual_completion_date,estimated_budget,allocated_budget)', pagination ? { count: 'exact' } : undefined)
     .eq('user_id', req.user.id)
     .order('added_at', { ascending: false });
   if (pagination) query = query.range(pagination.from, pagination.to);
@@ -128,7 +128,7 @@ export async function getProjectSummary(req: Request, res: Response): Promise<vo
 
   const projectQuery = supabase
     .from('projects')
-    .select('estimated_budget, allocated_budget')
+    .select('estimated_budget, allocated_budget, objectives')
     .eq('id', req.context.projectId)
     .maybeSingle();
 
@@ -276,7 +276,7 @@ export async function getProjectPresentation(req: Request, res: Response): Promi
       id: project.id,
       name: project.name,
       description: project.description ?? null,
-      objectives: null,
+      objectives: project.objectives ?? project.description ?? null,
       projectCode: project.project_code ?? null,
       projectManager: project.project_manager ?? null,
       startDate: project.start_date ?? project.planned_start_date ?? project.actual_start_date ?? null,

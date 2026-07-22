@@ -87,7 +87,7 @@ export const markAllNotificationsReadSchema = z.object({
 }).strict();
 
 const projectSchema = z.object({
-  name: text.max(255), description: optionalText, district: optionalText, sector: optionalText,
+  name: text.max(255), description: optionalText, objectives: optionalText, district: optionalText, sector: optionalText,
   start_date: date.nullable().optional(), end_date: date.nullable().optional(),
   project_code: nullableTextMax(100),
   project_manager: nullableTextMax(255),
