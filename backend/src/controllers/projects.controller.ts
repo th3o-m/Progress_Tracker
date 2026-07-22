@@ -210,6 +210,11 @@ export async function getProjectSummary(req: Request, res: Response): Promise<vo
 }
 
 export async function getProjectPresentation(req: Request, res: Response): Promise<void> {
+  console.log('[projects.presentation] request received', {
+    projectId: req.context.projectId,
+    userId: req.user.id,
+    role: req.context.roleInProject,
+  });
   const project = await getRecord('projects', req.context.projectId);
   let activitiesQuery = supabase.from('activities').select('id, code, name, category, district, status, progress_pct, start_date, end_date, description, remarks, actual_completion_date, created_at').eq('project_id', req.context.projectId);
   activitiesQuery = applyReadScope(activitiesQuery, req);
@@ -290,6 +295,14 @@ export async function getProjectPresentation(req: Request, res: Response): Promi
     },
     nextSteps: nextSteps.length ? nextSteps : ['Maintain project monitoring and continue updating project records.'],
   };
+  console.log('[projects.presentation] response ready', {
+    projectId: req.context.projectId,
+    projectName: response.project.name,
+    updateCount: response.recentUpdates.length,
+    achievementCount: response.achievements.length,
+    challengeCount: response.challenges.length,
+    nextStepCount: response.nextSteps.length,
+  });
   res.json(response);
 }
 
