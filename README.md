@@ -1,262 +1,236 @@
 # Progress Tracker
 
-A full-stack **Project Monitoring and Evaluation Platform** designed to help teams manage projects, track implementation progress, monitor activities, record challenges, review financial data, import spreadsheet records, generate reports, and present project insights through a professional **Presentation Mode**.
+Progress Tracker is a full-stack project monitoring and evaluation platform for managing multiple projects, tracking work plans, recording progress and challenges, reviewing imported spreadsheet data, generating reports, and presenting project updates in a dedicated presentation view.
 
-The platform is built for organizations that need a structured way to monitor multiple projects, improve reporting accuracy, and present progress updates clearly during meetings, reviews, and online presentations.
+The repository is split into a Vite React frontend and an Express + TypeScript backend, with Supabase used for authentication, persistence, and scheduled reminder workflows.
 
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [New Feature: Project Presentation Mode](#new-feature-project-presentation-mode)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Core Modules](#core-modules)
-- [Installation](#installation)
-- [Environment Variables](#environment-variables)
-- [Running the Application](#running-the-application)
-- [Database and Supabase](#database-and-supabase)
-- [Authentication and Authorization](#authentication-and-authorization)
-- [API Overview](#api-overview)
-- [Spreadsheet Import Workflow](#spreadsheet-import-workflow)
-- [Reports and Exports](#reports-and-exports)
-- [Notifications](#notifications)
-- [Deployment](#deployment)
-- [Testing Checklist](#testing-checklist)
-- [Future Improvements](#future-improvements)
-- [Author](#author)
-
----
-
-## Overview
-
-**Progress Tracker** is a modern web-based platform for managing and monitoring project implementation. It helps teams move away from scattered spreadsheets, manual reporting, and disconnected project records by providing one centralized system for project data.
-
-The system allows users to:
-
-- Create and manage projects.
-- Track project activities and progress.
-- Record updates, challenges, and financial entries.
-- Import structured data from spreadsheets.
-- Review and edit imported records.
-- Generate project reports.
-- Receive overdue task notifications.
-- Present project performance through a full-screen presentation view.
-
-The platform is especially useful for project officers, supervisors, finance teams, administrators, and organizations that need regular progress reporting.
-
----
-
-## Key Features
-
-### 1. Multi-Project Management
-
-Users can manage multiple projects from a single platform.
-
-Features include:
-
-- Project creation and selection.
-- Project-specific dashboards.
-- Project member management.
-- Role-based access per project.
-- Project switching.
-- Project overview and performance tracking.
-
----
-
-### 2. Dashboard Overview
-
-The dashboard gives users a quick view of project performance.
-
-It includes:
-
-- Project summary cards.
-- Activity progress indicators.
-- Recent updates.
-- Challenge summaries.
-- Financial highlights.
-- Project status overview.
-
----
-
-### 3. Work Plan and Activity Tracking
-
-The platform supports structured activity tracking for each project.
-
-Users can record:
-
-- Activity names.
-- Start and end dates.
-- Progress percentage.
-- Status.
-- Responsible officers.
-- Related updates.
-- Delays and pending work.
-
-This helps teams understand which activities are completed, ongoing, delayed, or not yet started.
-
----
-
-### 4. Progress Updates
-
-Users can submit regular project progress updates.
-
-Progress updates help capture:
-
-- What has been achieved.
-- Current implementation status.
-- Field updates.
-- Progress percentage.
-- Supporting comments.
-- Recent developments.
-
-These updates are used in dashboards, reports, and the new presentation mode.
-
----
-
-### 5. Challenges and Mitigation Tracking
-
-The platform allows teams to record project challenges and mitigation measures.
-
-Users can track:
-
-- Challenge title.
-- Description.
-- Status.
-- Mitigation actions.
-- Responsible persons.
-- Resolution progress.
-
-This improves accountability and helps management understand what is blocking implementation.
-
----
-
-### 6. Financial Tracking
-
-The platform includes financial tracking functionality for project monitoring.
-
-It can support:
-
-- Budget records.
-- Financial entries.
-- Approved amounts.
-- Pending amounts.
-- Rejected amounts.
-- Spending summaries.
-- Financial visibility based on user roles.
-
-This helps teams connect financial performance with implementation progress.
-
----
-
-### 7. Spreadsheet Import System
-
-The platform includes a spreadsheet import feature to reduce manual data entry.
-
-Supported functionality includes:
-
-- Uploading spreadsheet files.
-- Reading spreadsheet data.
-- Mapping imported columns to system fields.
-- Previewing imported data before saving.
-- Editing imported records.
-- Handling duplicate records.
-- Import history tracking.
-- Reviewing imported records in an editable overview area.
-
-This feature is useful when project data already exists in Excel files and needs to be moved into the system.
-
----
-
-### 8. Editable Imported Data Review
-
-After importing spreadsheet data, users can review and correct records inside the platform.
-
-This helps ensure:
-
-- Imported values are accurate.
-- Data errors are corrected before reporting.
-- Project records remain clean and reliable.
-- Users do not have to return to Excel for every correction.
-
----
-
-### 9. Reports and Exports
-
-The platform supports report generation and export functionality.
-
-Reports may include:
-
-- Project summaries.
-- Progress reports.
-- Financial summaries.
-- Activity reports.
-- Imported data summaries.
-- Downloadable report outputs.
-
-The backend includes report-generation support for structured project reporting.
-
----
-
-### 10. Email Notifications
-
-The platform includes an overdue task notification system.
-
-This allows the system to remind users about:
-
-- Overdue activities.
-- Delayed tasks.
-- Pending project responsibilities.
-
-The notification system is designed to improve follow-up and reduce missed deadlines.
-
----
-
-### 11. Role-Based Access Control
-
-The platform supports project-level access control.
-
-Different users can have different permissions depending on their role, such as:
-
-- Administrator
-- Supervisor
-- Project officer
-- Finance user
-- Viewer or limited-access user
-
-This ensures that users only access the project information they are allowed to see.
-
----
-
-## New Feature: Project Presentation Mode
-
-The latest major feature is **Project Presentation Mode**.
-
-This feature was designed because the platform is intended to be used during online meetings, reporting sessions, and executive project presentations.
-
-Instead of manually preparing slides from project data, users can open a clean full-screen presentation view generated from live project records.
-
----
-
-### Presentation Mode Route
+## Project Structure
 
 ```txt
-/projects/:projectId/presentation
+Progress_Tracker/
+- frontend/
+  - src/
+    - app/ - main app shell, pages, and UI components
+    - lib/ - API and Supabase helpers
+    - styles/ - global styles and theme files
+    - imports/ - sample uploaded assets
+  - guidelines/ - design guidance used by the frontend
+  - scripts/ - frontend helper scripts
+  - package.json
+- backend/
+  - src/
+    - controllers/ - route handlers
+    - routes/ - API route definitions
+    - middleware/ - auth, access control, and error handling
+    - services/ - email, reports, access, and audit logic
+    - schemas/ - shared validation schemas
+    - config/ - environment and Supabase clients
+    - types/ - Express and domain typings
+  - supabase/
+    - migrations/ - database migrations
+    - functions/ - Supabase Edge Functions
+  - scripts/ - maintenance and diagnostic scripts
+  - package.json
+- vercel.json
+- README.md
 ```
 
----
+Generated build output such as `frontend/dist/` and `backend/dist/` is intentionally omitted from the tree.
+
+## What The App Covers
+
+- Multi-project management and project switching
+- Dashboard overview and summary cards
+- Work plans and activity tracking
+- Progress updates and status reporting
+- Challenges and mitigation tracking
+- Financial entry tracking
+- Spreadsheet import and import review
+- Report generation and chart views
+- Role-based access control
+- Notifications and overdue reminders
+- Presentation mode for meetings and executive reviews
+- Invitation-based project joining
+
+## Frontend
+
+The frontend lives in [`frontend/`](./frontend) and is built with Vite and React.
+
+Key entry points:
+
+- [`frontend/src/main.tsx`](./frontend/src/main.tsx)
+- [`frontend/src/app/App.tsx`](./frontend/src/app/App.tsx)
+- [`frontend/src/lib/api.ts`](./frontend/src/lib/api.ts)
+- [`frontend/src/lib/supabase.ts`](./frontend/src/lib/supabase.ts)
+
+Important client routes:
+
+- `/` - main application shell
+- `/invite/:token` - invitation acceptance flow
+- `/projects/:projectId/presentation` - presentation mode
+
+If `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are not configured, the frontend falls back to a local demo mode.
+
+## Backend
+
+The backend lives in [`backend/`](./backend) and exposes the REST API used by the frontend.
+
+Key entry points:
+
+- [`backend/src/server.ts`](./backend/src/server.ts)
+- [`backend/src/app.ts`](./backend/src/app.ts)
+- [`backend/src/routes/index.ts`](./backend/src/routes/index.ts)
+
+API layout:
+
+- `/health` - health check
+- `/api/users`
+- `/api/projects`
+- `/api/invitations`
+- `/api/notifications`
+- `/api/projects/:projectId/members`
+- `/api/projects/:projectId/activities`
+- `/api/projects/:projectId/progress-updates`
+- `/api/projects/:projectId/challenges`
+- `/api/projects/:projectId/financial-entries`
+- `/api/projects/:projectId/reports`
+- `/api/projects/:projectId/report-imports`
+- `/api/projects/:projectId/notifications`
+
+The backend also exposes the overdue reminder endpoint used by the cron job:
+
+- `POST /api/notifications/overdue-tasks/run`
+
+## Prerequisites
+
+- Node.js 20 or newer
+- A Supabase project
+- A Resend account if you want email notifications to send successfully
+
+## Installation
+
+Install dependencies separately in each workspace:
+
+```bash
+cd frontend
+npm install
+
+cd ../backend
+npm install
+```
 
 ## Environment Variables
 
-### Supabase Edge Function Secrets
+### Frontend
 
-The overdue reminder Edge Function reads email configuration from Supabase secrets. Set these before deploying or invoking `send-overdue-reminders`:
+Create `frontend/.env` with:
 
 ```bash
+VITE_API_URL=http://localhost:3000/api
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+`VITE_API_URL` is optional. If omitted, the frontend defaults to `http://localhost:3000/api`.
+
+### Backend
+
+Create `backend/.env` with:
+
+```bash
+NODE_ENV=development
+PORT=3000
+FRONTEND_URL=http://localhost:5173
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+REPORT_URL_TTL_SECONDS=3600
+RESEND_API_KEY=your_resend_api_key
+EMAIL_FROM="Project Tracker <noreply@example.com>"
+CRON_SECRET=your_long_secret_value
+```
+
+Notes:
+
+- `RESEND_API_KEY` is optional for local development, but required for email delivery.
+- `EMAIL_FROM` controls the sender address used by the backend email service.
+- `CRON_SECRET` protects the cron-triggered reminder endpoint.
+
+### Supabase Edge Function Secrets
+
+The `send-overdue-reminders` Edge Function uses Supabase runtime secrets. Set these in Supabase before deploying or invoking the function:
+
+```bash
+supabase secrets set SUPABASE_URL=your_supabase_url
+supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 supabase secrets set RESEND_API_KEY=your_resend_api_key
 supabase secrets set FROM_EMAIL="Project Tracker <noreply@example.com>"
 ```
 
-Do not commit API keys or hardcode provider credentials. The function also relies on the standard Supabase Edge runtime secrets for `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`.
+## Running Locally
+
+Start the backend:
+
+```bash
+cd backend
+npm run dev
+```
+
+Start the frontend in a second terminal:
+
+```bash
+cd frontend
+npm run dev
+```
+
+## Scripts
+
+### Frontend
+
+- `npm run dev` - start the Vite development server
+- `npm run build` - build the frontend for production
+
+### Backend
+
+- `npm run dev` - start the API in watch mode
+- `npm run build` - compile TypeScript into `dist/`
+- `npm run start` - run the compiled server
+- `npm run typecheck` - run TypeScript without emitting files
+
+## Database And Supabase
+
+Database changes are managed through [`backend/supabase/migrations/`](./backend/supabase/migrations).
+
+The backend uses Supabase for:
+
+- Authentication
+- Project membership and access control
+- Project data storage
+- Notifications and reminder tracking
+- Invitation workflows
+
+## Deployment
+
+The root [`vercel.json`](./vercel.json) configures:
+
+- `frontend/` as the Vite frontend root
+- `backend/` as the API root
+- backend routing under `/_/backend`
+- a cron schedule that hits `/_/backend/api/notifications/overdue-tasks/run` daily at 06:00
+
+When deploying, make sure the backend `FRONTEND_URL` matches the live frontend origin and that the Supabase and Resend secrets are set in the target environment.
+
+## Maintenance Scripts
+
+The backend includes a few utility scripts in [`backend/scripts/`](./backend/scripts):
+
+- `diagnose-supabase.mjs`
+- `backfill-missing-profiles.mjs`
+- `test-signup-trigger.mjs`
+
+These are for maintenance and diagnostics rather than normal app startup.
+
+## Notes
+
+- The frontend has dedicated presentation and invitation routes outside the main dashboard shell.
+- The backend protects project-scoped routes with auth and project access middleware.
+- The repo does not define a formal automated test suite yet, so `build` and `typecheck` are the main validation steps.
