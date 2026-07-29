@@ -1,7 +1,24 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { apiRequest } from "../lib/api";
 
-export interface Activity { id: string; code: string | null; name: string; category: string; district: string; responsible_officer: string | null; start_date: string; end_date: string; status: string; progress_pct: number; created_at: string; }
+export interface Activity {
+  id: string;
+  code: string | null;
+  name: string;
+  category: string;
+  district: string;
+  responsible_officer: string | null;
+  start_date: string;
+  end_date: string;
+  status: string;
+  progress_pct: number;
+  description?: string | null;
+  status_color?: string | null;
+  remarks?: string | null;
+  actual_completion_date?: string | null;
+  import_id?: string | null;
+  created_at: string;
+}
 export interface ProgressUpdate { id: string; activity_id: string; officer_id: string; progress_pct: number; status: string; narrative: string; report_date: string; created_at: string; }
 export interface Challenge { id: string; activity_id: string; challenge_type: string; description: string; mitigation_plan: string | null; resolved: boolean; created_at: string; activities?: { code: string; name: string; district: string } | null; }
 export interface FinancialEntry { id: string; activity_id: string; expense_category: string; amount: number; description: string; status: "pending" | "approved" | "rejected"; created_at: string; }
@@ -74,6 +91,12 @@ function useProjectDataset<T>(path: string | null, emptyValue: T, enabled = true
 export function useProjectActivities(enabled = true) {
   const { projectId } = useProjectData();
   return useProjectDataset<Activity[]>(`/projects/${projectId}/activities`, [], enabled);
+}
+
+export function useProjectActivity(activityId: string | null, enabled = true) {
+  const { projectId } = useProjectData();
+  const path = activityId ? `/projects/${projectId}/activities/${activityId}` : null;
+  return useProjectDataset<Activity | null>(path, null, Boolean(activityId) && enabled);
 }
 
 export function useProjectProgressUpdates(enabled = true) {

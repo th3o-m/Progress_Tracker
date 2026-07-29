@@ -12,6 +12,7 @@ import { ProjectDataProvider } from "./ProjectDataContext";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { Skeleton } from "./components/ui/skeleton";
 import { NotificationsBell } from "./components/NotificationsBell";
+import { ActivityPage } from "./pages/ActivityPage";
 import type { AcceptedInvitationProject } from "./pages/InvitationPage";
 
 const WorkPlan = lazy(() => import("./components/WorkPlan").then((module) => ({ default: module.WorkPlan })));
@@ -36,6 +37,18 @@ function hasPasswordRecoveryToken(): boolean {
 
 function projectIdFromUrl(): string | null {
   return new URLSearchParams(window.location.search).get("project");
+}
+
+function mainPageFromUrl(): Page {
+  const page = new URLSearchParams(window.location.search).get("page");
+  if (page === "home" || page === "workplan" || page === "progress" || page === "challenges" || page === "dataentry" || page === "import" || page === "review-imports" || page === "reports" || page === "settings") return page;
+  return "home";
+}
+
+function activityRouteFromPath(): { projectId: string; activityId: string } | null {
+  const match = window.location.pathname.match(/^\/projects\/([^/]+)\/activities\/([^/]+)\/?$/);
+  if (!match?.[1] || !match?.[2]) return null;
+  return { projectId: decodeURIComponent(match[1]), activityId: decodeURIComponent(match[2]) };
 }
 
 function presentationProjectIdFromPath(): string | null {
@@ -103,8 +116,9 @@ interface CurrentUserResponse {
 export default function App() {
   const presentationProjectId = presentationProjectIdFromPath();
   const invitationToken = invitationTokenFromPath();
+  const activityRoute = activityRouteFromPath();
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
-  const [page, setPage] = useState<Page>("home");
+  const [page, setPage] = useState<Page>(mainPageFromUrl);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [authenticated, setAuthenticated] = useState<boolean | null>(supabase ? null : true);
   const [passwordRecovery, setPasswordRecovery] = useState(hasPasswordRecoveryToken);
@@ -173,8 +187,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (authenticated && supabase) void loadProjects();
-  }, [authenticated, loadProjects]);
+    if (authenticated && supabase && !activityRoute) void loadProjects();
+  }, [authenticated, loadProjects, activityRoute]);
 
   function selectProject(projectId: string) {
     setSelectedProjectId(projectId);
@@ -244,8 +258,17 @@ export default function App() {
     );
   }
 
+  if (activityRoute) {
+    return <ActivityPage projectId={activityRoute.projectId} activityId={activityRoute.activityId} fromPage={new URLSearchParams(window.location.search).get("from") ?? new URLSearchParams(window.location.search).get("page")} />;
+  }
+
   const selectedMembership = memberships.find((membership) => membership.projects.id === selectedProjectId);
   const visibleNavItems = navItems.filter((item) => item.id !== "import" || memberships.some((membership) => membership.role === "admin" || membership.role === "supervisor"));
+  function openActivity(activityId: string) {
+    if (!selectedMembership) return;
+    const returnPage = page === "home" ? "" : `&from=${encodeURIComponent(page)}`;
+    window.location.href = `/projects/${selectedMembership.projects.id}/activities/${activityId}?project=${encodeURIComponent(selectedMembership.projects.id)}${returnPage}`;
+  }
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -389,11 +412,11 @@ export default function App() {
               <p className="mt-2 text-sm text-muted-foreground">Ask an organization administrator to add you to a project, or create one if you are an organization administrator.</p>
             </div>
           )}
-          {selectedMembership && page === "home" && <Overview projectId={selectedMembership.projects.id} onViewChallenges={() => setPage("challenges")} />}
+          {selectedMembership && page === "home" && <Overview projectId={selectedMembership.projects.id} onViewChallenges={() => setPage("challenges")} onOpenActivity={openActivity} />}
           {selectedMembership && page !== "home" && <ProjectDataProvider projectId={selectedMembership.projects.id} role={selectedMembership.role}>
             <Suspense fallback={<PageLoadingFallback />}>
-            {page === "workplan" && <WorkPlan />}
-            {page === "progress" && <ProgressTracking />}
+            {page === "workplan" && <WorkPlan onOpenActivity={openActivity} />}
+            {page === "progress" && <ProgressTracking onOpenActivity={openActivity} />}
             {page === "challenges" && <Challenges />}
             {page === "dataentry" && <DataEntry memberships={memberships} />}
             {page === "import" && <ImportSpreadsheet memberships={memberships} />}
