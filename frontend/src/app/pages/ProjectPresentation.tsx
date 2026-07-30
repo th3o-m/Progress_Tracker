@@ -33,7 +33,8 @@ interface PresentationData {
   recentUpdates: Array<{ id: string; title: string | null; description: string | null; progress: number; createdAt: string | null }>;
   achievements: string[];
   challenges: Array<{ id: string; title: string | null; description: string | null; mitigation: string | null; status: string | null }>;
-  financialSummary: { totalBudget: number; totalSpent: number; approvedAmount: number; pendingAmount: number; rejectedAmount: number };
+  financialSummary: { totalBudget: number; totalSpent: number; remainingBudget: number; budgetUtilizationPct: number; latestReportingDate: string | null };
+  financialReports: Array<{ id: string; reporting_date: string; amount_spent: number; cumulative_expenditure: number; notes: string | null; created_by: string; created_at: string }>;
   nextSteps: string[];
 }
 
@@ -98,11 +99,7 @@ export function ProjectPresentation({ projectId }: { projectId: string }) {
     ].filter((item) => item.value > 0);
   }, [data]);
 
-  const financialData = useMemo(() => data ? [
-    { label: "Approved", value: data.financialSummary.approvedAmount },
-    { label: "Pending", value: data.financialSummary.pendingAmount },
-    { label: "Rejected", value: data.financialSummary.rejectedAmount },
-  ].filter((item) => item.value > 0) : [], [data]);
+  const financialData = useMemo(() => data?.financialReports ?? [], [data]);
 
   const totalSlides = 8;
   const goToSlide = useCallback((next: number) => setSlide(Math.max(0, Math.min(totalSlides - 1, next))), [totalSlides]);
@@ -132,7 +129,7 @@ export function ProjectPresentation({ projectId }: { projectId: string }) {
     { title: "Recent Progress Updates", eyebrow: "Latest Records", content: <div className="space-y-4">{data.recentUpdates.length ? data.recentUpdates.map((item) => <div key={item.id} className="rounded-md border border-slate-200 bg-white p-5"><div className="flex items-center justify-between gap-4"><h3 className="font-semibold text-slate-950">{item.title || "Progress update"}</h3><span className="text-sm text-slate-500">{formatDate(item.createdAt)}</span></div><p className="mt-3 text-slate-600">{item.description || "No narrative recorded."}</p><Progress className="mt-4" value={item.progress} /></div>) : <EmptyLine>Limited progress update data is currently available.</EmptyLine>}</div> },
     { title: "Key Achievements", eyebrow: "Completed Work", content: <div className="grid gap-4 md:grid-cols-2">{data.achievements.length ? data.achievements.map((item) => <div key={item} className="rounded-md border border-emerald-200 bg-emerald-50 p-5 text-emerald-950"><Trophy className="mb-3 h-5 w-5" /><p className="font-semibold">{item}</p></div>) : <EmptyLine>No completed activities recorded yet.</EmptyLine>}</div> },
     { title: "Challenges and Mitigation", eyebrow: "Risks", content: <div className="space-y-4">{data.challenges.length ? data.challenges.map((item) => <div key={item.id} className="rounded-md border border-red-200 bg-white p-5"><h3 className="font-semibold text-slate-950">{item.title || "Challenge"}</h3><p className="mt-2 text-slate-600">{item.description || "No description recorded."}</p><p className="mt-3 text-sm font-semibold text-slate-700">Mitigation: <span className="font-normal">{item.mitigation || "No mitigation recorded yet."}</span></p></div>) : <EmptyLine>No unresolved challenges recorded.</EmptyLine>}</div> },
-    { title: "Financial Summary", eyebrow: "Budget and Expenditure", content: <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]"><div className="grid gap-4"><MetricCard icon={Landmark} label="Project Budget" value={formatMoney(data.financialSummary.totalBudget)} /><MetricCard icon={FileText} label="Total Recorded Spend" value={formatMoney(data.financialSummary.totalSpent)} /></div><div className="h-80">{financialData.length ? <ResponsiveContainer width="100%" height="100%"><AreaChart data={financialData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="label" /><YAxis /><Tooltip formatter={(value) => formatMoney(Number(value))} /><Area type="monotone" dataKey="value" stroke="#1a3a6b" fill="#bfdbfe" /></AreaChart></ResponsiveContainer> : <EmptyLine>No financial entries recorded or visible for this role.</EmptyLine>}</div></div> },
+    { title: "Financial Summary", eyebrow: "Budget and Expenditure", content: <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]"><div className="grid gap-4"><MetricCard icon={Landmark} label="Project Budget" value={formatMoney(data.financialSummary.totalBudget)} /><MetricCard icon={FileText} label="Spent to Date" value={formatMoney(data.financialSummary.totalSpent)} /><MetricCard icon={ClipboardList} label="Remaining Budget" value={formatMoney(data.financialSummary.remainingBudget)} /><MetricCard icon={Trophy} label="Budget Used" value={`${data.financialSummary.budgetUtilizationPct}%`} /><p className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">Latest reporting date: {formatDate(data.financialSummary.latestReportingDate)}</p></div><div className="h-80">{financialData.length ? <ResponsiveContainer width="100%" height="100%"><AreaChart data={financialData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="reporting_date" /><YAxis /><Tooltip formatter={(value) => formatMoney(Number(value))} labelFormatter={(label) => `Reporting date: ${label}`} /><Area type="monotone" dataKey="cumulative_expenditure" stroke="#1a3a6b" fill="#bfdbfe" /></AreaChart></ResponsiveContainer> : <EmptyLine>No financial reports recorded yet.</EmptyLine>}</div></div> },
     { title: "Next Steps", eyebrow: "Forward Actions", content: <div className="space-y-4">{data.nextSteps.map((item, index) => <div key={item} className="flex gap-4 rounded-md border border-slate-200 bg-white p-5"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-950 text-sm font-bold text-white">{index + 1}</span><p className="text-lg text-slate-700">{item}</p></div>)}</div> },
   ];
 

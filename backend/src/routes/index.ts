@@ -3,6 +3,7 @@ import { activitiesRouter } from './activities.routes.js';
 import { usersRouter, membersRouter } from './auth.routes.js';
 import { challengesRouter } from './challenges.routes.js';
 import { financialRouter } from './financial.routes.js';
+import { financialReportsRouter } from './financialReports.routes.js';
 import { invitationsRouter } from './invitations.routes.js';
 import { progressRouter } from './progress.routes.js';
 import { projectsRouter } from './projects.routes.js';
@@ -21,6 +22,7 @@ apiRouter.use('/projects/:projectId/activities', projectAccess, activitiesRouter
 apiRouter.use('/projects/:projectId/progress-updates', projectAccess, progressRouter);
 apiRouter.use('/projects/:projectId/challenges', projectAccess, challengesRouter);
 apiRouter.use('/projects/:projectId/financial-entries', projectAccess, financialRouter);
+apiRouter.use('/projects/:projectId/financial-reports', projectAccess, financialReportsRouter);
 apiRouter.use('/projects/:projectId/reports', projectAccess, reportsRouter);
 apiRouter.use('/projects/:projectId/report-imports', projectAccess, reportImportsRouter);
 apiRouter.use('/projects/:projectId/notifications', projectAccess, notificationsRouter);

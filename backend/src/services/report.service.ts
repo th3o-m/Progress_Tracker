@@ -5,7 +5,7 @@ export interface ReportData {
   activities: Record<string, any>[];
   progress_updates: Record<string, any>[];
   challenges: Record<string, any>[];
-  financial_entries: Record<string, any>[];
+  financial_reports: Record<string, any>[];
 }
 
 function display(value: unknown): string {
@@ -24,7 +24,7 @@ export async function buildExcel(data: ReportData, start: string, end: string): 
     ['Period', `${start} to ${end}`],
     ['Activities', data.activities.length], ['Progress updates', data.progress_updates.length],
     ['Challenges', data.challenges.length],
-    ['Financial entries', data.financial_entries.length],
+    ['Financial reports', data.financial_reports.length],
   ]);
   summary.getRow(1).font = { bold: true, size: 16 };
   summary.columns = [{ width: 28 }, { width: 36 }];
@@ -59,7 +59,7 @@ export function buildPdf(data: ReportData, start: string, end: string): Promise<
       doc.moveDown(0.4);
       for (const row of rows) {
         if (doc.y > 720) doc.addPage();
-        const preferred = ['code', 'name', 'status', 'report_date', 'full_name', 'expense_category', 'amount', 'description', 'progress_pct'];
+        const preferred = ['code', 'name', 'status', 'report_date', 'reporting_date', 'full_name', 'cumulative_expenditure', 'amount', 'description', 'progress_pct'];
         const fields = preferred.filter((key) => key in row).slice(0, 5);
         doc.fontSize(8).text(fields.map((key) => `${key}: ${display(row[key])}`).join(' | '), { width: 510 });
         doc.moveDown(0.25);

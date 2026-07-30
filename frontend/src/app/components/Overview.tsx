@@ -16,6 +16,9 @@ interface ProjectSummary {
   unresolvedChallenges: number;
   totalBudget: number;
   totalSpent: number;
+  remainingBudget: number;
+  budgetUtilizationPct: number;
+  latestReportingDate: string | null;
   averageProgress: number;
   activityStatusSummary: Array<{ status: string; count: number }>;
   recentActivities: Array<{ id: string; code: string; name: string; district: string; status: string; progress_pct: number; created_at: string }>;
@@ -32,6 +35,9 @@ const emptySummary: ProjectSummary = {
   unresolvedChallenges: 0,
   totalBudget: 0,
   totalSpent: 0,
+  remainingBudget: 0,
+  budgetUtilizationPct: 0,
+  latestReportingDate: null,
   averageProgress: 0,
   activityStatusSummary: [],
   recentActivities: [],

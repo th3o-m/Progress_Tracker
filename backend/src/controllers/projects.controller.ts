@@ -50,10 +50,6 @@ function countByStatus(rows: Array<Record<string, any>>, statuses: string[]): nu
   return rows.filter((row) => targets.has(normalizeStatus(row.status))).length;
 }
 
-function sum(rows: Array<Record<string, any>>, field: string): number {
-  return rows.reduce((total, row) => total + Number(row[field] ?? 0), 0);
-}
-
 function firstText(...values: unknown[]): string | null {
   const value = values.find((item) => typeof item === 'string' && item.trim().length > 0);
   return typeof value === 'string' ? value.trim() : null;
@@ -64,6 +60,40 @@ function relatedActivityName(value: unknown): string | null {
   const record = Array.isArray(value) ? value[0] : value;
   if (!record || typeof record !== 'object' || !('name' in record)) return null;
   return typeof record.name === 'string' ? record.name : null;
+}
+
+function sortByReportingDate(rows: Array<Record<string, any>>): Array<Record<string, any>> {
+  return [...rows].sort((left, right) => {
+    const leftTime = new Date(`${left.reporting_date ?? left.created_at ?? ''}`).getTime();
+    const rightTime = new Date(`${right.reporting_date ?? right.created_at ?? ''}`).getTime();
+    if (leftTime !== rightTime) return leftTime - rightTime;
+    return new Date(String(left.created_at ?? 0)).getTime() - new Date(String(right.created_at ?? 0)).getTime();
+  });
+}
+
+function financialReportMetrics(project: Record<string, any>, reports: Array<Record<string, any>>) {
+  const ordered = sortByReportingDate(reports);
+  const latest = ordered.length ? ordered[ordered.length - 1] : null;
+  const totalBudget = Number(project.allocated_budget ?? project.estimated_budget ?? 0);
+  const totalSpent = latest ? Number(latest.cumulative_expenditure ?? 0) : 0;
+  const remainingBudget = Math.max(totalBudget - totalSpent, 0);
+  const budgetUtilizationPct = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+  return {
+    totalBudget,
+    totalSpent,
+    remainingBudget,
+    budgetUtilizationPct,
+    latestReportingDate: latest?.reporting_date ?? null,
+    financialReports: ordered.map((report) => ({
+      id: report.id,
+      reporting_date: report.reporting_date,
+      amount_spent: Number(report.amount_spent ?? 0),
+      cumulative_expenditure: Number(report.cumulative_expenditure ?? 0),
+      notes: report.notes ?? null,
+      created_by: report.created_by,
+      created_at: report.created_at,
+    })),
+  };
 }
 
 function buildExecutiveSummary(overallProgress: number, totalActivities: number, completedActivities: number, ongoingActivities: number, delayedActivities: number, recentUpdates: unknown[], unresolvedChallenges: number): string {
@@ -115,10 +145,9 @@ export async function getProjectSummary(req: Request, res: Response): Promise<vo
   challengesQuery = applyReadScope(challengesQuery, req, 'officer_id');
 
   let financialQuery = supabase
-    .from('financial_entries')
-    .select('amount, status, submitted_by')
+    .from('project_financial_reports')
+    .select('id, reporting_date, amount_spent, cumulative_expenditure, notes, created_by, created_at')
     .eq('project_id', req.context.projectId);
-  financialQuery = applyReadScope(financialQuery, req, 'submitted_by');
 
   const projectQuery = supabase
     .from('projects')
@@ -156,7 +185,8 @@ export async function getProjectSummary(req: Request, res: Response): Promise<vo
   const recentActivities = recentActivitiesResult.data ?? [];
   const progressUpdates = progressResult.data ?? [];
   const recentProgressUpdates = recentProgressResult.data ?? [];
-  const financialEntries = financialResult.data ?? [];
+  const financialReports = financialResult.data ?? [];
+  const financialSummary = financialReportMetrics(projectResult.data ?? {}, financialReports);
   const totalActivities = activities.length;
   const completedActivities = activities.filter((activity) => isCompletedStatus(activity.status)).length;
   const inProgressActivities = activities.filter((activity) => isInProgressStatus(activity.status)).length;
@@ -184,8 +214,6 @@ export async function getProjectSummary(req: Request, res: Response): Promise<vo
     notStartedActivities,
     overdueActivities,
     unresolvedChallenges: challengesResult.count ?? 0,
-    totalBudget: Number(projectResult.data?.allocated_budget ?? projectResult.data?.estimated_budget ?? 0),
-    totalSpent: sum(financialEntries, 'amount'),
     averageProgress,
     activityStatusSummary,
     recentActivities: recentActivities.map((activity) => ({
@@ -206,6 +234,7 @@ export async function getProjectSummary(req: Request, res: Response): Promise<vo
       created_at: update.created_at ?? null,
     })),
     monthlyProgressSummary,
+    ...financialSummary,
   });
 }
 
@@ -228,14 +257,14 @@ export async function getProjectPresentation(req: Request, res: Response): Promi
   challengesQuery = applyReadScope(challengesQuery, req, 'officer_id');
   const { data: challengesData, error: challengesError } = await challengesQuery; throwDb(challengesError);
 
-  let financialQuery = supabase.from('financial_entries').select('id, amount, approved_budget, balance, status, submitted_by').eq('project_id', req.context.projectId);
-  financialQuery = applyReadScope(financialQuery, req, 'submitted_by');
+  let financialQuery = supabase.from('project_financial_reports').select('id, reporting_date, amount_spent, cumulative_expenditure, notes, created_by, created_at').eq('project_id', req.context.projectId).order('reporting_date', { ascending: true }).order('created_at', { ascending: true });
   const { data: financialData, error: financialError } = await financialQuery; throwDb(financialError);
 
   const activities = activitiesData ?? [];
   const progressUpdates = progressData ?? [];
   const challenges = challengesData ?? [];
-  const financialEntries = financialData ?? [];
+  const financialReports = financialData ?? [];
+  const financialSummary = financialReportMetrics(project, financialReports);
   const totalActivities = activities.length;
   const completedActivities = countByStatus(activities, ['completed', 'complete']);
   const ongoingActivities = countByStatus(activities, ['in progress', 'ongoing', 'active']);
@@ -287,12 +316,9 @@ export async function getProjectPresentation(req: Request, res: Response): Promi
       status: challenge.resolved ? 'Resolved' : 'Unresolved',
     })),
     financialSummary: {
-      totalBudget: Number(project.allocated_budget ?? project.estimated_budget ?? 0),
-      totalSpent: sum(financialEntries, 'amount'),
-      approvedAmount: sum(financialEntries.filter((entry) => entry.status === 'approved'), 'amount'),
-      pendingAmount: sum(financialEntries.filter((entry) => entry.status === 'pending'), 'amount'),
-      rejectedAmount: sum(financialEntries.filter((entry) => entry.status === 'rejected'), 'amount'),
+      ...financialSummary,
     },
+    financialReports: financialSummary.financialReports,
     nextSteps: nextSteps.length ? nextSteps : ['Maintain project monitoring and continue updating project records.'],
   };
   console.log('[projects.presentation] response ready', {

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { AlertCircle, CheckCircle2, FileSpreadsheet, LoaderCircle, RefreshCw, Upload, X } from "lucide-react";
 import type { WorkBook } from "xlsx";
 import { apiRequest } from "../../lib/api";
-import { useProjectData, type Activity, type FinancialEntry, type ProjectMember } from "../ProjectDataContext";
+import { useProjectData, type Activity, type FinancialEntry, type FinancialReport, type ProjectMember } from "../ProjectDataContext";
 import { parseWorkbookSheet, type FinancialPreview, type MilestonePreview, type ParsedSpreadsheetPreview, type ProjectDetailsPreview, type RiskPreview } from "../importSpreadsheetParser";
 import type { ProjectMembership } from "./ProjectSwitcher";
 
@@ -95,6 +95,7 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
   const [selectedProjectId, setSelectedProjectId] = useState(projectId || managerProjects[0]?.projects.id || "");
   const [projectActivities, setProjectActivities] = useState<Activity[]>([]);
   const [projectFinancial, setProjectFinancial] = useState<FinancialEntry[]>([]);
+  const [projectFinancialReports, setProjectFinancialReports] = useState<FinancialReport[]>([]);
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -113,14 +114,16 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
     let cancelled = false;
     async function loadSelectedProjectData() {
       try {
-        const [nextActivities, nextFinancial, nextMembers] = await Promise.all([
+        const [nextActivities, nextFinancial, nextFinancialReports, nextMembers] = await Promise.all([
           apiRequest<Activity[]>(`/projects/${selectedProjectId}/activities`),
           apiRequest<FinancialEntry[]>(`/projects/${selectedProjectId}/financial-entries`),
+          apiRequest<FinancialReport[]>(`/projects/${selectedProjectId}/financial-reports`),
           apiRequest<ProjectMember[]>(`/projects/${selectedProjectId}/members`),
         ]);
         if (!cancelled) {
           setProjectActivities(nextActivities);
           setProjectFinancial(nextFinancial);
+          setProjectFinancialReports(nextFinancialReports);
           setProjectMembers(nextMembers);
         }
       } catch (requestError) {
@@ -393,6 +396,26 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
     else await apiRequest(`/projects/${selectedProjectId}/financial-entries`, { method: "POST", body: JSON.stringify(body) });
   }
 
+  async function saveFinancialReportSnapshot(nextPreview: ParsedSpreadsheetPreview): Promise<void> {
+    if (nextPreview.financialRows.length === 0) return;
+    const reportingDate = chooseDate(nextPreview.projectDetails.actualCompletionDate || "", nextPreview.projectDetails.plannedCompletionDate || "");
+    if (!reportingDate) return;
+    const cumulativeExpenditure = nextPreview.financialRows.reduce((total, row) => total + Number(row.expenditureToDate || 0), 0);
+    const previousTotal = projectFinancialReports.reduce((latest, report) => Math.max(latest, Number(report.cumulative_expenditure || 0)), 0);
+    try {
+      await apiRequest(`/projects/${selectedProjectId}/financial-reports`, {
+        method: "POST",
+        body: JSON.stringify({
+          reporting_date: reportingDate,
+          amount_spent: Math.max(cumulativeExpenditure - previousTotal, 0),
+          notes: `Imported from ${nextPreview.sourceSheetName || nextPreview.sourceFileName || "spreadsheet"}`,
+        }),
+      });
+    } catch (requestError) {
+      console.warn("Financial report snapshot could not be saved; continuing with spreadsheet import.", requestError);
+    }
+  }
+
   async function confirmImport() {
     const blockers = blockingErrors();
     if (!preview || blockers.length > 0) return;
@@ -404,6 +427,7 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
       const importRecord = await saveReportSnapshot(preview);
       const importId = importRecord?.id ?? null;
       const projectUpdated = await updateSelectedProjectDetails(preview);
+      await saveFinancialReportSnapshot(preview);
       const activityMap = new Map<string, Activity>();
       for (const [index, milestone] of preview.milestones.entries()) {
         const activity = await createOrUpdateActivity(milestone, index, responsibleOfficer, importId);

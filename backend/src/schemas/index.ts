@@ -33,6 +33,7 @@ export const updateChallengeSchema = createChallengeSchema.omit({ activity_id: t
 
 export const createFinancialSchema = z.object({ activity_id: uuid, expense_category: text.max(100), amount: z.coerce.number().nonnegative().multipleOf(0.01), description: text, receipt_url: z.string().url().nullable().optional(), import_id: importId, approved_budget: nullableNumber.refine((value) => value == null || value >= 0, 'Number must be greater than or equal to 0'), balance: nullableNumber, percentage_utilised: nullableNumber, remarks: nullableText }).strict();
 export const updateFinancialSchema = createFinancialSchema.partial().refine((v) => Object.keys(v).length > 0, 'At least one field is required');
+export const createFinancialReportSchema = z.object({ reporting_date: date, amount_spent: z.coerce.number().nonnegative().multipleOf(0.01), notes: nullableText }).strict();
 export const decisionSchema = z.object({ reason: z.string().trim().max(1000).optional() }).strict();
 
 export const generateReportSchema = z.object({ type: z.enum(['pdf', 'excel']), start_date: date, end_date: date }).strict().refine((v) => v.end_date >= v.start_date, { path: ['end_date'], message: 'Must be on or after start_date' });

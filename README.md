@@ -44,7 +44,7 @@ Generated build output such as `frontend/dist/` and `backend/dist/` is intention
 - Work plans and activity tracking
 - Progress updates and status reporting
 - Challenges and mitigation tracking
-- Financial entry tracking
+- Project financial reporting by reporting date
 - Spreadsheet import and import review
 - Report generation and chart views
 - Role-based access control
@@ -93,6 +93,7 @@ API layout:
 - `/api/projects/:projectId/progress-updates`
 - `/api/projects/:projectId/challenges`
 - `/api/projects/:projectId/financial-entries`
+- `/api/projects/:projectId/financial-reports`
 - `/api/projects/:projectId/reports`
 - `/api/projects/:projectId/report-imports`
 - `/api/projects/:projectId/notifications`
