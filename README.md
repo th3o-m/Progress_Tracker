@@ -165,7 +165,31 @@ supabase secrets set SUPABASE_URL=your_supabase_url
 supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 supabase secrets set RESEND_API_KEY=your_resend_api_key
 supabase secrets set FROM_EMAIL="Project Tracker <noreply@example.com>"
+supabase secrets set APP_URL="https://your-frontend.example.com"
+supabase secrets set REMINDER_CRON_SECRET="use-a-long-random-value"
 ```
+
+`REMINDER_CRON_SECRET` is used only by the scheduled GitHub Actions invocation. Never expose it in frontend code or logs.
+
+### Scheduled overdue reminders
+
+The `send-overdue-reminders` Edge Function supports authenticated manual mode and scheduler-only scheduled mode. Apply the project reminder settings migration, deploy the function, and configure the GitHub repository secrets before enabling schedules:
+
+```bash
+supabase db push
+supabase functions deploy send-overdue-reminders
+gh workflow run send-overdue-reminders.yml
+```
+
+Required GitHub repository secrets:
+
+- `SUPABASE_URL`
+- `REMINDER_CRON_SECRET`
+- `SUPABASE_ANON_KEY` is not required by this function because the scheduler authenticates with `X-Cron-Secret`.
+
+Managers can enable automatic email reminders and choose manual, daily, every 3 days, weekly, biweekly, or monthly frequency in project settings. Scheduled comparisons and the monthly calendar calculation use UTC. GitHub Actions scheduled workflows use UTC and may run later than the exact scheduled minute.
+
+Resend requires a verified sending domain or sender identity. Set `FROM_EMAIL` to a sender accepted by that verified domain. `RESEND_API_KEY`, `FROM_EMAIL`, `APP_URL`, and `REMINDER_CRON_SECRET` are Supabase Edge Function secrets; do not commit their values.
 
 ## Running Locally
 
@@ -218,7 +242,7 @@ The root [`vercel.json`](./vercel.json) configures:
 - backend routing under `/_/backend`
 - a cron schedule that hits `/_/backend/api/notifications/overdue-tasks/run` daily at 06:00
 
-When deploying, make sure the backend `FRONTEND_URL` matches the live frontend origin and that the Supabase and Resend secrets are set in the target environment.
+When deploying, make sure the backend `FRONTEND_URL` matches the live frontend origin and that the Supabase, Resend, and scheduler secrets are set in the target environment. The older backend cron endpoint remains available for compatibility, but GitHub Actions should invoke the Edge Function for scheduled project reminders.
 
 ## Maintenance Scripts
 

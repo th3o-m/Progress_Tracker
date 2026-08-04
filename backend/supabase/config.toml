@@ -1,0 +1,3 @@
+[functions.send-overdue-reminders]
+# The function validates browser JWTs for manual mode and X-Cron-Secret for scheduled mode.
+verify_jwt = false

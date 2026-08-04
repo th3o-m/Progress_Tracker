@@ -49,6 +49,15 @@ interface OverdueReminderResult {
   sent: number;
   skipped: number;
   failed: number;
+  projectsProcessed?: number;
+  projectsSkipped?: number;
+}
+
+type ReminderFrequency = "manual" | "daily" | "every_3_days" | "weekly" | "biweekly" | "monthly";
+interface ProjectReminderSettings {
+  email_enabled: boolean;
+  frequency: ReminderFrequency;
+  last_sent_at: string | null;
 }
 
 interface OverdueReminderHistoryItem {
@@ -195,6 +204,9 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
   const [reminderStatus, setReminderStatus] = useState<"idle" | "sending" | "success" | "failure">("idle");
   const [reminderHistory, setReminderHistory] = useState<OverdueReminderHistoryItem[]>([]);
   const [reminderHistoryLoading, setReminderHistoryLoading] = useState(false);
+  const [reminderSettings, setReminderSettings] = useState<ProjectReminderSettings>({ email_enabled: false, frequency: "manual", last_sent_at: null });
+  const [reminderSettingsLoading, setReminderSettingsLoading] = useState(false);
+  const [reminderSettingsSaving, setReminderSettingsSaving] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteRole, setInviteRole] = useState<ProjectRole>("officer");
   const [inviteDays, setInviteDays] = useState(7);
@@ -238,8 +250,44 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
     }
   }
 
+  async function loadReminderSettings(silent = false) {
+    if (!supabase || !canSendReminders) return;
+    setReminderSettingsLoading(true);
+    try {
+      const { data, error: settingsError } = await supabase.from("project_reminder_settings").select("email_enabled, frequency, last_sent_at").eq("project_id", projectId).maybeSingle();
+      if (settingsError) throw settingsError;
+      setReminderSettings((data as ProjectReminderSettings | null) ?? { email_enabled: false, frequency: "manual", last_sent_at: null });
+    } catch (requestError) {
+      if (!silent) showError(requestError, "Unable to load reminder settings");
+    } finally {
+      setReminderSettingsLoading(false);
+    }
+  }
+
+  async function saveReminderSettings() {
+    if (!supabase || reminderSettingsSaving || !canSendReminders) return;
+    setReminderSettingsSaving(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) throw userError ?? new Error("You must be signed in to update reminder settings");
+      const { error: saveError } = await supabase.from("project_reminder_settings").upsert({ project_id: projectId, email_enabled: reminderSettings.email_enabled, frequency: reminderSettings.frequency, created_by: userData.user.id }, { onConflict: "project_id" });
+      if (saveError) throw saveError;
+      setMessage("Automatic overdue reminder settings saved.");
+      await loadReminderSettings(true);
+    } catch (requestError) {
+      showError(requestError, "Unable to save reminder settings. Project managers only.");
+    } finally {
+      setReminderSettingsSaving(false);
+    }
+  }
+
   useEffect(() => {
-    if (canSendReminders) void loadReminderHistory();
+    if (canSendReminders) {
+      void loadReminderHistory();
+      void loadReminderSettings();
+    }
   }, [projectId, canSendReminders]);
 
   const filteredMembers = useMemo(() => {
@@ -507,6 +555,27 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
               {remindersBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <MailWarning className="h-4 w-4" />}
               {remindersBusy ? "Sending..." : "Send Reminder"}
             </button>
+          </div>
+          <div className="mt-5 border-t border-border pt-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h4 className="font-semibold text-foreground">Automatic email schedule</h4>
+                <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">The daily scheduler checks this project in UTC. Monthly reminders are due one calendar month after the previous run.</p>
+                {reminderSettings.last_sent_at && <p className="mt-2 text-xs text-muted-foreground">Last automatic run: {new Date(reminderSettings.last_sent_at).toLocaleString()}</p>}
+              </div>
+              <label className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
+                <input type="checkbox" checked={reminderSettings.email_enabled} disabled={reminderSettingsLoading || reminderSettingsSaving} onChange={(event) => setReminderSettings((current) => ({ ...current, email_enabled: event.target.checked }))} />
+                Enable automatic emails
+              </label>
+            </div>
+            <div className="mt-4 flex flex-wrap items-end gap-3">
+              <label className="text-xs font-medium text-muted-foreground">Frequency<select value={reminderSettings.frequency} disabled={reminderSettingsLoading || reminderSettingsSaving} onChange={(event) => setReminderSettings((current) => ({ ...current, frequency: event.target.value as ReminderFrequency }))} className="mt-1.5 block min-w-48 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground">
+                <option value="manual">Manual only</option><option value="daily">Daily</option><option value="every_3_days">Every 3 days</option><option value="weekly">Weekly</option><option value="biweekly">Every 2 weeks</option><option value="monthly">Monthly</option>
+              </select></label>
+              <button type="button" onClick={saveReminderSettings} disabled={reminderSettingsLoading || reminderSettingsSaving} className="inline-flex items-center gap-2 rounded-md border border-[#1a3a6b] px-4 py-2 text-sm font-semibold text-[#1a3a6b] disabled:cursor-wait disabled:opacity-60">
+                {reminderSettingsSaving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{reminderSettingsSaving ? "Saving..." : "Save schedule"}
+              </button>
+            </div>
           </div>
           <div className="mt-5 overflow-hidden rounded-md border border-border">
             <div className="flex items-center justify-between border-b border-border bg-secondary px-3 py-2">

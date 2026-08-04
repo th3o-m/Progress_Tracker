@@ -1,0 +1,43 @@
+name: Send overdue reminders
+
+on:
+  schedule:
+    # GitHub Actions cron uses UTC. This runs daily at 06:00 UTC.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: overdue-reminders
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Invoke scheduled reminder function
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          REMINDER_CRON_SECRET: ${{ secrets.REMINDER_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_URL" || { echo "SUPABASE_URL repository secret is missing" >&2; exit 1; }
+          test -n "$REMINDER_CRON_SECRET" || { echo "REMINDER_CRON_SECRET repository secret is missing" >&2; exit 1; }
+          response_file="$(mktemp)"
+          http_code="$(curl --silent --show-error --max-time 90 --output "$response_file" --write-out '%{http_code}' \
+            -X POST "${SUPABASE_URL%/}/functions/v1/send-overdue-reminders" \
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Secret: $REMINDER_CRON_SECRET" \
+            --data '{"mode":"scheduled"}')"
+          echo "Reminder function HTTP status: $http_code"
+          python - "$response_file" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              payload = json.load(handle)
+          safe = {key: payload.get(key) for key in ("projectsProcessed", "projectsSkipped", "projectsFailed", "considered", "sent", "skipped", "failed") if key in payload}
+          print(json.dumps(safe, separators=(",", ":")))
+          PY
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "Scheduled reminder invocation failed" >&2
+            exit 1
+          fi
