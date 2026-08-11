@@ -19,7 +19,17 @@ export interface Activity {
   import_id?: string | null;
   created_at: string;
 }
-export interface ProgressUpdate { id: string; activity_id: string; officer_id: string; progress_pct: number; status: string; narrative: string; report_date: string; created_at: string; }
+export interface ProgressUpdate {
+  id: string;
+  activity_id: string;
+  officer_id: string;
+  progress_pct: number;
+  status: string;
+  narrative: string;
+  report_date: string;
+  created_at: string;
+  activities?: { code: string | null; name: string; district: string } | null;
+}
 export interface Challenge { id: string; activity_id: string; challenge_type: string; description: string; mitigation_plan: string | null; resolved: boolean; created_at: string; activities?: { code: string; name: string; district: string } | null; }
 export interface FinancialEntry { id: string; activity_id: string; expense_category: string; amount: number; description: string; status: "pending" | "approved" | "rejected"; created_at: string; }
 export interface FinancialReport { id: string; reporting_date: string; amount_spent: number; cumulative_expenditure: number; notes: string | null; created_by: string; created_at: string; }
