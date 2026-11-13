@@ -11,7 +11,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "test:project-memberships": "tsx --test ../frontend/src/lib/projectMemberships.test.ts"
+    "test:project-memberships": "tsx --test ../frontend/src/lib/projectMemberships.test.ts",
+    "test:frontend-lib": "tsx --test ../frontend/src/lib/*.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0",
