@@ -114,7 +114,7 @@ export default function App() {
   const activityRoute = activityRouteFromPath();
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [page, setPage] = useState<Page>(mainPageFromUrl);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => !window.matchMedia("(max-width: 767px)").matches);
   const [authenticated, setAuthenticated] = useState<boolean | null>(supabase ? null : true);
   const [passwordRecovery, setPasswordRecovery] = useState(hasPasswordRecoveryToken);
   const [signingOut, setSigningOut] = useState(false);
@@ -197,6 +197,7 @@ export default function App() {
     if (projectId === newlyJoinedProjectId) setNewlyJoinedProjectId(null);
     sessionStorage.setItem("selectedProjectId", projectId);
     setPage("home");
+    if (window.matchMedia("(max-width: 767px)").matches) setSidebarOpen(false);
   }
 
   const handleInvitationAccepted = useCallback(async (project: AcceptedInvitationProject) => {
@@ -273,10 +274,18 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-[100dvh] overflow-hidden bg-background">
+      {sidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-30 bg-foreground/40 md:hidden"
+        />
+      )}
       {/* Sidebar */}
       <aside
-        className="flex flex-col transition-all duration-200"
+        className={`${sidebarOpen ? "flex" : "hidden md:flex"} fixed inset-y-0 left-0 z-40 flex-col transition-[width] duration-200 md:static md:z-auto`
         style={{
           width: sidebarOpen ? 280 : 64,
           background: "var(--sidebar)",
@@ -292,7 +301,7 @@ export default function App() {
             </div>
             {sidebarOpen && (
               <div className="min-w-0 flex-1 overflow-hidden">
-                <p style={{ color: "var(--sidebar-foreground)", fontWeight: 700, fontSize: "0.8rem", lineHeight: 1.2 }}>Projectt Tracker</p>
+                <p style={{ color: "var(--sidebar-foreground)", fontWeight: 700, fontSize: "0.8rem", lineHeight: 1.2 }}>Project Tracker</p>
                 <p className="truncate" style={{ color: "var(--sidebar-foreground)", fontSize: "0.65rem", opacity: 0.6, lineHeight: 1.2 }}>{selectedMembership?.projects.name || "Project Dashboard"}</p>
               </div>
             )}
@@ -314,14 +323,15 @@ export default function App() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 py-3 overflow-y-auto">
+        <nav aria-label="Main navigation" className="flex-1 overflow-y-auto py-3">
           {visibleNavItems.map((item) => {
             const active = page === item.id;
             return (
               <button
                 key={item.id}
-                onClick={() => setPage(item.id)}
-                className="w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-left"
+                onClick={() => { setPage(item.id); if (window.matchMedia("(max-width: 767px)").matches) setSidebarOpen(false); }}
+                aria-current={active ? "page" : undefined}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:ring-sidebar-ring"
                 style={{
                   background: active ? "var(--sidebar-accent)" : "transparent",
                   color: active ? "#fff" : "var(--sidebar-foreground)",
@@ -373,16 +383,26 @@ export default function App() {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar */}
-        <header className="flex items-center justify-between px-6 bg-card border-b border-border" style={{ height: 64, flexShrink: 0 }}>
-          <div>
-            <h1 className="text-foreground" style={{ fontSize: "1rem", fontWeight: 700 }}>{pageTitle[page]}</h1>
-            <p className="text-muted-foreground" style={{ fontSize: "0.72rem" }}>
+        <header className="flex min-h-[72px] flex-wrap items-center justify-between gap-3 border-b border-border bg-card px-4 py-3 sm:px-6" style={{ flexShrink: 0 }}>
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              aria-label="Open navigation"
+              onClick={() => setSidebarOpen(true)}
+              className="rounded-md border border-border p-2 text-foreground focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <div className="min-w-0">
+              <h1 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">{pageTitle[page]}</h1>
+            <p className="max-w-[65ch] truncate text-xs text-muted-foreground sm:text-sm">
               {selectedMembership?.projects.name || "No project selected"} — Republic of Botswana &nbsp;|&nbsp; {new Date().toLocaleDateString("en-BW", { year: "numeric", month: "long", day: "numeric" })}
             </p>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Date range */}
-            <div className="flex items-center gap-2 bg-secondary rounded-md px-3 py-1.5 border border-border">
+            <div className="hidden items-center gap-2 rounded-md border border-border bg-secondary px-3 py-1.5 sm:flex">
               <span className="text-muted-foreground" style={{ fontSize: "0.75rem" }}>FY 2026</span>
               <select className="bg-transparent text-foreground focus:outline-none" style={{ fontSize: "0.75rem" }}>
                 <option>Jan – Dec 2026</option>
@@ -406,7 +426,7 @@ export default function App() {
         </header>
 
         {/* Content */}
-        <main key={selectedProjectId ?? "no-project"} className="flex-1 overflow-y-auto p-6">
+        <main key={selectedProjectId ?? "no-project"} className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           {projectsLoading && supabase && (
             <div className="mb-4 rounded-md border border-border bg-card p-4 text-sm text-muted-foreground" role="status" aria-live="polite">
               Loading your projects...
