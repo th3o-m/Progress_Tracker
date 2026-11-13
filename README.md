@@ -71,6 +71,10 @@ Important client routes:
 
 If `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are not configured, the frontend falls back to a local demo mode.
 
+## UI and HCI Design Standard
+
+All frontend features should follow [Project Tracker UI Rules](./frontend/guidelines/Guidelines.md) for the existing navy/teal palette, semantic theme tokens, premium SaaS typography, responsive grids, Nielsen-based usability, and WCAG 2.2 AA accessibility checks. Frontend pull requests use the [UI/HCI checklist](./.github/PULL_REQUEST_TEMPLATE.md) to review these requirements.
+
 ## Backend
 
 The backend lives in [`backend/`](./backend) and exposes the REST API used by the frontend.
