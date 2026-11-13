@@ -69,9 +69,22 @@ function isExpired(invitation: InvitationRecord): boolean {
 
 async function markExpired(invitation: InvitationRecord): Promise<void> {
   if (invitation.status !== 'Pending' || !isExpired(invitation)) return;
-  const { error } = await supabase.from('project_invitations').update({ status: 'Expired', updated_at: new Date().toISOString() }).eq('id', invitation.id);
+  const { data, error } = await supabase.from('project_invitations')
+    .update({ status: 'Expired', updated_at: new Date().toISOString() })
+    .eq('id', invitation.id).eq('status', 'Pending')
+    .lte('expires_at', new Date().toISOString())
+    .select('status')
+    .maybeSingle();
   throwDb(error);
-  invitation.status = 'Expired';
+  if (data) {
+    invitation.status = 'Expired';
+    return;
+  }
+  // A concurrent redemption/revocation may have changed the row.
+  const { data: current, error: lookupError } = await supabase.from('project_invitations')
+    .select('status').eq('id', invitation.id).maybeSingle();
+  throwDb(lookupError);
+  if (current) invitation.status = current.status as InvitationStatus;
 }
 
 function assertUsableInvitation(invitation: InvitationRecord): void {
@@ -127,51 +140,48 @@ export async function validateInvitation(req: Request, res: Response): Promise<v
   res.json(invitationResponse(invitation, Boolean(membership)));
 }
 
+type AcceptanceResult = {
+  outcome: 'accepted' | 'already_member' | 'not_found' | 'expired' |
+    'revoked' | 'already_accepted' | 'project_not_found' | 'inactive_user';
+  project?: { id: string; name: string; role: string };
+  membership?: Record<string, unknown>;
+};
+
 export async function acceptInvitation(req: Request, res: Response): Promise<void> {
   const token = parseToken(req.params.token);
-  const invitation = await getInvitationByToken(token);
-  await markExpired(invitation);
-  assertUsableInvitation(invitation);
-  const project = normalizeRelation(invitation.projects);
-  if (!project || project.status === 'cancelled') throw new ApiError(404, 'Project not found');
-
-  const { data: existing, error: existingError } = await supabase.from('project_members').select('id, role').eq('project_id', invitation.project_id).eq('user_id', req.user.id).maybeSingle();
-  throwDb(existingError);
-  if (existing) {
-    res.json({
-      success: true,
-      alreadyMember: true,
-      message: 'You are already a member of this project',
-      project: { id: invitation.project_id, name: project.name, role: existing.role },
-      membership: existing,
-      invitation: invitationResponse(invitation, true),
-    });
-    return;
-  }
-
-  const { data: membership, error: memberError } = await supabase
-    .from('project_members')
-    .insert({ project_id: invitation.project_id, user_id: req.user.id, role: invitation.role, district: null })
-    .select('id, project_id, user_id, role, district, added_at')
-    .single();
-  throwDb(memberError);
-  if (!membership) throw new ApiError(500, 'Project membership was not created');
-
-  const now = new Date().toISOString();
-  const { error: updateError } = await supabase
-    .from('project_invitations')
-    .update({ status: 'Accepted', accepted_by: req.user.id, accepted_at: now, updated_at: now })
-    .eq('id', invitation.id)
-    .eq('status', 'Pending');
-  throwDb(updateError);
-  await auditLog({ user_id: req.user.id, action: 'create', table_name: 'project_members', record_id: membership.id, details: { project_id: invitation.project_id, role: invitation.role, invitation_id: invitation.id } });
-  res.status(201).json({
-    success: true,
-    alreadyMember: false,
-    message: 'Successfully joined project',
-    project: { id: invitation.project_id, name: project.name, role: invitation.role },
-    membership,
+  // PostgreSQL locks the invitation row and commits membership, token state,
+  // and audit event together. No preliminary lookup is used for authorization.
+  const { data, error } = await supabase.rpc('accept_project_invitation', {
+    p_token: token,
+    p_user_id: req.user.id,
   });
+  throwDb(error);
+  const result = data as AcceptanceResult | null;
+  if (!result) throw new ApiError(500, 'Invitation could not be processed');
+
+  switch (result.outcome) {
+    case 'not_found': throw new ApiError(404, 'Invitation not found');
+    case 'expired': throw new ApiError(410, 'This invitation has expired');
+    case 'revoked': throw new ApiError(410, 'This invitation is no longer valid');
+    case 'already_accepted': throw new ApiError(409, 'This invitation has already been accepted');
+    case 'project_not_found': throw new ApiError(404, 'Project not found');
+    case 'inactive_user': throw new ApiError(401, 'User profile is missing or inactive');
+    case 'already_member':
+      res.json({
+        success: true, alreadyMember: true,
+        message: 'You are already a member of this project',
+        project: result.project, membership: result.membership,
+      });
+      return;
+    case 'accepted':
+      res.status(201).json({
+        success: true, alreadyMember: false,
+        message: 'Successfully joined project',
+        project: result.project, membership: result.membership,
+      });
+      return;
+    default: throw new ApiError(500, 'Unknown invitation acceptance result');
+  }
 }
 
 export async function revokeInvitation(req: Request, res: Response): Promise<void> {
@@ -187,8 +197,13 @@ export async function revokeInvitation(req: Request, res: Response): Promise<voi
   throwDb(membershipError);
   if (!managerMembership) throw new ApiError(403, 'Insufficient permissions');
   if (invitation.status === 'Accepted') throw new ApiError(409, 'Accepted invitations cannot be revoked');
-  const { error } = await supabase.from('project_invitations').update({ status: 'Revoked', updated_at: new Date().toISOString() }).eq('id', invitation.id);
+  const { data: revoked, error } = await supabase.from('project_invitations')
+    .update({ status: 'Revoked', updated_at: new Date().toISOString() })
+    .eq('id', invitation.id).eq('status', 'Pending')
+    .select('id')
+    .maybeSingle();
   throwDb(error);
+  if (!revoked) throw new ApiError(409, 'Invitation is no longer pending');
   await auditLog({ user_id: req.user.id, action: 'update', table_name: 'project_invitations', record_id: invitation.id, details: { project_id: invitation.project_id, status: 'Revoked' } });
   res.status(204).send();
 }
