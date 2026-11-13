@@ -108,12 +108,6 @@ const demoMembership: ProjectMembership = {
   projects: { id: "demo-project", name: "Projectt Tracker Demo", description: "Demo project", district: "Botswana", sector: "Environment", status: "active" },
 };
 
-interface CurrentUserResponse {
-  id: string;
-  is_org_admin: boolean;
-  projects?: unknown;
-}
-
 export default function App() {
   const presentationProjectId = presentationProjectIdFromPath();
   const invitationToken = invitationTokenFromPath();
@@ -147,13 +141,20 @@ export default function App() {
     setProjectsLoading(true);
     setProjectError(null);
     try {
-      const currentUser = await apiRequest<CurrentUserResponse | null>("/users/me");
-      if (!currentUser || typeof currentUser.id !== "string" || !currentUser.id) {
-        throw new Error("Your account details could not be loaded. Please sign in again.");
+      const currentUser = await apiRequest<unknown>("/users/me");
+      if (
+        !currentUser || typeof currentUser !== "object" || Array.isArray(currentUser) ||
+        !("id" in currentUser) || typeof currentUser.id !== "string" || !currentUser.id
+      ) {
+        throw new Error(
+          "The account API returned an incomplete profile. Check VITE_API_URL and confirm the backend /api/users/me endpoint returns your user ID.",
+        );
       }
-      const activeMemberships = normalizeProjectMemberships(currentUser.projects);
+      const activeMemberships = normalizeProjectMemberships(
+        "projects" in currentUser ? currentUser.projects : undefined,
+      );
       setMemberships(activeMemberships);
-      setIsOrgAdmin(currentUser.is_org_admin === true);
+      setIsOrgAdmin("is_org_admin" in currentUser && currentUser.is_org_admin === true);
       setCurrentUserId(currentUser.id);
       const requestedProjectId = projectIdFromUrl();
       const storedProjectId = sessionStorage.getItem("selectedProjectId");
@@ -406,8 +407,25 @@ export default function App() {
 
         {/* Content */}
         <main key={selectedProjectId ?? "no-project"} className="flex-1 overflow-y-auto p-6">
-          {projectError && <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{projectError}</div>}
-          {!projectsLoading && !selectedMembership && supabase && (
+          {projectsLoading && supabase && (
+            <div className="mb-4 rounded-md border border-border bg-card p-4 text-sm text-muted-foreground" role="status" aria-live="polite">
+              Loading your projects...
+            </div>
+          )}
+          {projectError && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/40 bg-card p-4" role="alert">
+              <p className="text-sm text-foreground">{projectError}</p>
+              <button
+                type="button"
+                onClick={() => void loadProjects()}
+                disabled={projectsLoading}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+              >
+                Retry loading projects
+              </button>
+            </div>
+          )}
+          {!projectsLoading && !projectError && !selectedMembership && supabase && (
             <div className="rounded-md border border-border bg-card p-8 text-center shadow-sm">
               <h2 className="font-bold text-foreground">No active project selected</h2>
               <p className="mt-2 text-sm text-muted-foreground">Ask an organization administrator to add you to a project, or create one if you are an organization administrator.</p>
