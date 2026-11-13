@@ -12,7 +12,7 @@
     },
     "backend": {
       "root": "backend",
-      "entrypoint": "src/server.ts",
+      "entrypoint": "vercel.cjs",
       "rewrites": [
         {
           "source": "/_/backend/:path(.*)?",
