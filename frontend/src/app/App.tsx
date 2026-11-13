@@ -7,6 +7,7 @@ import { Overview } from "./components/Overview";
 import { Login } from "./components/Login";
 import { supabase } from "../lib/supabase";
 import { apiRequest } from "../lib/api";
+import { normalizeProjectMemberships } from "../lib/projectMemberships";
 import { ProjectSwitcher, type ProjectMembership } from "./components/ProjectSwitcher";
 import { ProjectDataProvider } from "./ProjectDataContext";
 import { ThemeToggle } from "./components/ThemeToggle";
@@ -110,7 +111,7 @@ const demoMembership: ProjectMembership = {
 interface CurrentUserResponse {
   id: string;
   is_org_admin: boolean;
-  projects: Array<Omit<ProjectMembership, "projects"> & { projects: ProjectMembership["projects"] | ProjectMembership["projects"][] | null }>;
+  projects?: unknown;
 }
 
 export default function App() {
@@ -146,13 +147,13 @@ export default function App() {
     setProjectsLoading(true);
     setProjectError(null);
     try {
-      const currentUser = await apiRequest<CurrentUserResponse>("/users/me");
-      const activeMemberships = (currentUser.projects ?? []).flatMap((membership) => {
-        const project = Array.isArray(membership.projects) ? membership.projects[0] : membership.projects;
-        return project && project.status !== "cancelled" ? [{ ...membership, projects: project } as ProjectMembership] : [];
-      });
+      const currentUser = await apiRequest<CurrentUserResponse | null>("/users/me");
+      if (!currentUser || typeof currentUser.id !== "string" || !currentUser.id) {
+        throw new Error("Your account details could not be loaded. Please sign in again.");
+      }
+      const activeMemberships = normalizeProjectMemberships(currentUser.projects);
       setMemberships(activeMemberships);
-      setIsOrgAdmin(currentUser.is_org_admin);
+      setIsOrgAdmin(currentUser.is_org_admin === true);
       setCurrentUserId(currentUser.id);
       const requestedProjectId = projectIdFromUrl();
       const storedProjectId = sessionStorage.getItem("selectedProjectId");
