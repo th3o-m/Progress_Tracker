@@ -195,6 +195,36 @@ Managers can enable automatic email reminders and choose manual, daily, every 3 
 
 Resend requires a verified sending domain or sender identity. Set `FROM_EMAIL` to a sender accepted by that verified domain. `RESEND_API_KEY`, `FROM_EMAIL`, `APP_URL`, and `REMINDER_CRON_SECRET` are Supabase Edge Function secrets; do not commit their values.
 
+## StackBlitz development: signed in but account does not load
+
+Supabase sign-in and the Express API are separate. Signing in successfully only proves that Supabase Auth accepted the credentials. The frontend must also reach the **Express API** to retrieve `GET /api/users/me`.
+
+If you are developing the frontend on StackBlitz but your backend is deployed elsewhere, set these variables in the frontend environment (do not commit actual values):
+
+```env
+VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+VITE_SUPABASE_ANON_KEY=YOUR_PUBLIC_ANON_KEY
+VITE_API_URL=https://YOUR_DEPLOYED_BACKEND/_/backend/api
+```
+
+The `VITE_API_URL` above is for the repository's Vercel configuration (`vercel.json`, which mounts the backend at `/_/backend`). For a separately hosted Express backend that mounts the router at `/api`, use `https://YOUR_BACKEND_HOST/api` instead. **Do not point `VITE_API_URL` to the React frontend URL**.
+
+- Restart the StackBlitz Vite dev server after editing environment variables.
+- In the browser Developer Tools → Network, check `GET .../users/me`. It must return HTTP 200 with JSON containing an `id` and `projects` array. HTTP 200 with HTML usually indicates a frontend fallback, not a working backend.
+- A network/CORS error means the preview origin cannot reach the backend. The current backend CORS configuration permits the single origin in `FRONTEND_URL`; configure it for the preview origin or serve the frontend and API from an authorized same origin.
+- HTTP 401 means the API rejected the bearer token or the application user profile. Confirm both frontend and backend use the same Supabase project, and that the profile is present and active.
+- Do not add `SUPABASE_SERVICE_ROLE_KEY` to the frontend, StackBlitz public configuration, or a `VITE_*` variable.
+
+On a deployed Vercel frontend, when `VITE_API_URL` is absent, the client defaults to the same-origin `/_/backend/api` route. In local development, the fallback remains `http://localhost:3000/api`.
+
+To run API response and project-membership tests:
+
+```bash
+cd backend
+npm install
+npm run test:frontend-lib
+```
+
 ## Running Locally
 
 Start the backend:
