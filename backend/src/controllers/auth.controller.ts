@@ -8,7 +8,17 @@ import { ApiError, getPagination, paginatedResponse, parseBody, throwDb } from '
 export async function getCurrentUser(req: Request, res: Response): Promise<void> {
   const profile = await getRecord('profiles', req.user.id);
   const { data: memberships, error } = await supabase.from('project_members').select('id, role, district, added_at, projects(id,name,description,district,sector,start_date,end_date,status,created_by,created_at,project_code,project_manager,planned_start_date,actual_start_date,planned_completion_date,actual_completion_date,estimated_budget,allocated_budget)').eq('user_id', req.user.id).order('added_at', { ascending: false });
-  throwDb(error); res.json({ ...profile, projects: memberships ?? [] });
+  throwDb(error);
+  // A related project can be null (for example, after an access-policy change).
+  // Never send incomplete memberships to the project selector.
+  const visibleMemberships = (memberships ?? []).filter((membership) => {
+    if (!membership) return false;
+    const relatedProjects = membership.projects;
+    return Array.isArray(relatedProjects)
+      ? relatedProjects.some(Boolean)
+      : Boolean(relatedProjects);
+  });
+  res.json({ ...profile, projects: visibleMemberships });
 }
 
 export async function addProjectMember(req: Request, res: Response): Promise<void> {
