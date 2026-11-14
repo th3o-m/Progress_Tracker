@@ -12,7 +12,8 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "test:project-memberships": "tsx --test ../frontend/src/lib/projectMemberships.test.ts",
-    "test:frontend-lib": "tsx --test ../frontend/src/lib/*.test.ts"
+    "test:frontend-lib": "tsx --test ../frontend/src/lib/*.test.ts",
+    "test:integration": "npm run build && node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0",
