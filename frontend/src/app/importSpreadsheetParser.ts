@@ -226,7 +226,9 @@ export function toDate(value: unknown): string {
 export function parseMoney(value: unknown): number | "" {
   const raw = cellText(value).replace(/,/g, "");
   if (!raw) return "";
-  const parsed = Number(raw.replace(/[^0-9.-]/g, ""));
+  const numeric = raw.replace(/[^0-9.-]/g, "");
+  if (!numeric) return "";
+  const parsed = Number(numeric);
   return Number.isFinite(parsed) ? parsed : "";
 }
 

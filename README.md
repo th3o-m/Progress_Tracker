@@ -112,7 +112,7 @@ The backend also exposes the overdue reminder endpoint used by the cron job:
 
 ## Prerequisites
 
-- Node.js 20 or newer
+- Node.js 24.x
 - A Supabase project
 - A Resend account if you want email notifications to send successfully
 
@@ -296,4 +296,4 @@ These are for maintenance and diagnostics rather than normal app startup.
 
 - The frontend has dedicated presentation and invitation routes outside the main dashboard shell.
 - The backend protects project-scoped routes with auth and project access middleware.
-- The repo does not define a formal automated test suite yet, so `build` and `typecheck` are the main validation steps.
+- See [Phase 0 stabilization](docs/phase-0-stabilization.md) for integration tests, CI, staging configuration and release gates.
