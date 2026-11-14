@@ -71,6 +71,10 @@ Important client routes:
 
 If `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are not configured, the frontend falls back to a local demo mode.
 
+## Product Roadmap and Future Predictive Intelligence
+
+The multi-purpose SaaS evolution is outlined in the [Project Tracker 2.0 product roadmap](./docs/product-roadmap.md). It includes a **planned future Predictive Intelligence module** for KPI forecasting, evidence-based early warnings, and versioned model outputs. See the [Predictive Intelligence technical blueprint](./docs/predictive-intelligence.md) for the data-collection requirements, modular ML architecture, evaluation criteria and security boundaries. These features are **not yet implemented**; the current priority is building reliable, tenant-scoped historical KPI records and reporting.
+
 ## UI and HCI Design Standard
 
 All frontend features should follow [Project Tracker UI Rules](./frontend/guidelines/Guidelines.md) for the existing navy/teal palette, semantic theme tokens, premium SaaS typography, responsive grids, Nielsen-based usability, and WCAG 2.2 AA accessibility checks. Frontend pull requests use the [UI/HCI checklist](./.github/PULL_REQUEST_TEMPLATE.md) to review these requirements.
