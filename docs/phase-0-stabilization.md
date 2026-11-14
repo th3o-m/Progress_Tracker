@@ -92,3 +92,22 @@ commit separately so the next main deployment does not reintroduce the defect.
 - Hosted isolated staging: blocked on test project/credentials and test sign-in.
 - Dependency security: unresolved baseline advisories block completion.
 - Hosted CI results must be checked on the pushed commit; local success is not CI success.
+
+### Audit follow-up
+
+Compatible backend lockfile updates remove the critical findings. The unused
+frontend react-router dependency is removed. Remaining release-blocking high
+advisories are Zod (GHSA-mrhx-c7xc-m3w5) and SheetJS/xlsx; backend ExcelJS's uuid
+also has a moderate advisory. A Zod major migration needs explicit regression
+coverage for partial-update defaults and coercion; do not force-upgrade it solely
+to silence audit. The npm xlsx release has no patched version in the current
+registry: evaluate an upstream patched distribution or a replacement with import
+round-trip tests before changing spreadsheet behavior.
+
+The initial hosted Stabilization verification job passed every build, typecheck
+and test; dependency-security jobs failed as intended. A live preview probe
+returned 500 despite build READY. Runtime logs identify missing FRONTEND_URL,
+SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY. This is a configuration gate, not a
+module-packaging regression. The user explicitly chose to keep hosted staging
+blocked until a separate test project is available. Do not supply dummy keys and
+call staging verified, or reuse production secrets to bypass this gate.
