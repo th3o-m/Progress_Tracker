@@ -1,4 +1,14 @@
 import cors from 'cors'; import express from 'express'; import helmet from 'helmet'; import { pinoHttp } from 'pino-http';
 import { env } from './config/env.js'; import { runOverdueTaskNotificationsForCron } from './controllers/notifications.controller.js'; import { auth } from './middleware/auth.js'; import { errorHandler, notFound } from './middleware/errorHandler.js'; import { apiRouter } from './routes/index.js'; import { asyncHandler } from './utils/http.js';
-export const app = express(); app.disable('x-powered-by'); app.use(helmet()); app.use(cors({ origin: env.FRONTEND_URL, credentials: true, methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'] })); app.use(pinoHttp({ redact: ['req.headers.authorization'] })); app.use(express.json({ limit: '1mb' }));
+export const app = express(); app.disable('x-powered-by'); app.use(helmet()); app.use(cors({ origin: env.FRONTEND_URL, credentials: true, methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'] })); app.use(pinoHttp({
+  // Log only routing/status evidence. Vercel injects credentials in headers,
+  // and query strings can contain invitation or authentication tokens.
+  serializers: {
+    req: (req) => ({ id: req.id, method: req.method, path: req.url?.split('?')[0] }),
+    res: (res) => ({ statusCode: res.statusCode, contentType: res.headers?.['content-type'] }),
+  },
+})); app.use(express.json({ limit: '1mb' }));
 app.get('/health', (_req, res) => res.json({ status: 'ok' })); app.get('/api/notifications/overdue-tasks/run', asyncHandler(runOverdueTaskNotificationsForCron)); app.post('/api/notifications/overdue-tasks/run', asyncHandler(runOverdueTaskNotificationsForCron)); app.use('/api', auth, apiRouter); app.use(notFound); app.use(errorHandler);
+
+// Vercel imports the application without starting the local HTTP listener.
+export default app;
