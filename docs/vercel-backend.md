@@ -10,8 +10,10 @@ The existing overdue-notification cron path and schedule remain unchanged.
 
 `backend/src/app.ts` imports Express and exports the application as the default
 export. `src/server.ts` remains the local listener. The backend service explicitly
-selects the Express framework and the source app entrypoint. It runs `npm ci`
-and `npm run typecheck`; Vercel handles TypeScript compilation and dependency
+selects the Express framework and the source app entrypoint. It runs
+`npm ci --include=dev` and `npm run typecheck`; explicitly including development
+dependencies keeps TypeScript available when production sets `NODE_ENV=production`.
+Vercel handles TypeScript compilation and dependency
 tracing. The local `npm run build` command still emits `dist` for local use.
 
 Keep the package and TypeScript configuration in ESM/NodeNext mode. Do not point
