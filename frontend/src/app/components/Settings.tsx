@@ -580,7 +580,7 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
           <div className="mt-5 overflow-hidden rounded-md border border-border">
             <div className="flex items-center justify-between border-b border-border bg-secondary px-3 py-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Reminder history</span>
-              <button type="button" onClick={loadReminderHistory} disabled={reminderHistoryLoading} className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-foreground hover:bg-card disabled:cursor-wait disabled:opacity-60">
+              <button type="button" onClick={() => void loadReminderHistory()} disabled={reminderHistoryLoading} className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-foreground hover:bg-card disabled:cursor-wait disabled:opacity-60">
                 <RefreshCw className={`h-3.5 w-3.5 ${reminderHistoryLoading ? "animate-spin" : ""}`} />Refresh
               </button>
             </div>
