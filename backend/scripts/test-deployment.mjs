@@ -52,11 +52,14 @@ try {
   await missing.arrayBuffer();
   await new Promise(resolve => setTimeout(resolve, 100));
   assert.ok(logs.includes('"statusCode":401'), 'Request status must remain observable');
+  assert.ok(logs.includes('"contentType":"application/json'), 'Response media type must remain observable');
   assert.ok(!logs.includes(sentinel), 'Headers and query credentials must not be logged');
   console.log('PASS: entrypoint import, health JSON, unauthenticated 401 JSON, 404 JSON, credential-free logs');
 } finally {
   clearTimeout(deadline);
-  const exited = once(child, 'exit');
-  child.kill();
-  await exited;
+  if (child.exitCode === null && child.signalCode === null) {
+    const exited = once(child, 'exit');
+    child.kill();
+    await exited;
+  }
 }

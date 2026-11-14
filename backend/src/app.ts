@@ -5,7 +5,7 @@ export const app = express(); app.disable('x-powered-by'); app.use(helmet()); ap
   // and query strings can contain invitation or authentication tokens.
   serializers: {
     req: (req) => ({ id: req.id, method: req.method, path: req.url?.split('?')[0] }),
-    res: (res) => ({ statusCode: res.statusCode }),
+    res: (res) => ({ statusCode: res.statusCode, contentType: res.headers?.['content-type'] }),
   },
 })); app.use(express.json({ limit: '1mb' }));
 app.get('/health', (_req, res) => res.json({ status: 'ok' })); app.get('/api/notifications/overdue-tasks/run', asyncHandler(runOverdueTaskNotificationsForCron)); app.post('/api/notifications/overdue-tasks/run', asyncHandler(runOverdueTaskNotificationsForCron)); app.use('/api', auth, apiRouter); app.use(notFound); app.use(errorHandler);
