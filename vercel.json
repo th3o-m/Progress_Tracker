@@ -12,18 +12,21 @@
     },
     "backend": {
       "root": "backend",
-      "entrypoint": "vercel.cjs",
+      "entrypoint": "src/app.ts",
       "rewrites": [
         {
           "source": "/_/backend/:path(.*)?",
           "destination": "/:path"
         }
-      ]
+      ],
+      "framework": "express",
+      "buildCommand": "npm run typecheck",
+      "installCommand": "npm ci"
     }
   },
   "rewrites": [
     {
-      "source": "/_/backend/(.*)",
+      "source": "/_/backend/:path(.*)?",
       "destination": {
         "service": "backend"
       }
