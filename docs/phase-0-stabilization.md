@@ -85,24 +85,37 @@ commit separately so the next main deployment does not reintroduce the defect.
 ## Current evidence and gaps
 
 - Existing production: direct health 200 JSON and unauthenticated account 401 JSON.
-- Local suite: 15 HTTP integration cases; existing 11 frontend regressions.
+- Local suite: 15 HTTP integration cases plus 6 validation regressions; 15 frontend regressions including 4 binary workbook import tests.
 - Authentication code uses Supabase getUser(token), then requires an active profile.
 - Membership middleware constrains both project ID and authenticated user ID;
   nested record lookup additionally constrains project_id. Org admin does not bypass it.
 - Hosted isolated staging: blocked on test project/credentials and test sign-in.
-- Dependency security: unresolved baseline advisories block completion.
+- Dependency security: high/critical findings remediated; two moderate ExcelJS/uuid findings remain below the unchanged CI threshold.
 - Hosted CI results must be checked on the pushed commit; local success is not CI success.
 
 ### Audit follow-up
 
 Compatible backend lockfile updates remove the critical findings. The unused
-frontend react-router dependency is removed. Remaining release-blocking high
-advisories are Zod (GHSA-mrhx-c7xc-m3w5) and SheetJS/xlsx; backend ExcelJS's uuid
-also has a moderate advisory. A Zod major migration needs explicit regression
-coverage for partial-update defaults and coercion; do not force-upgrade it solely
-to silence audit. The npm xlsx release has no patched version in the current
-registry: evaluate an upstream patched distribution or a replacement with import
-round-trip tests before changing spreadsheet behavior.
+frontend react-router dependency is removed. Zod is pinned to 4.6.7, addressing
+GHSA-mrhx-c7xc-m3w5. Validation regressions cover create defaults, omitted PATCH
+fields, coercion, money/progress bounds, nullable imports, records, dates, roles,
+and the API 400 error contract. Defaults are explicitly removed from optional
+PATCH fields so updating a name cannot reset status, progress or resolution.
+
+SheetJS is pinned to the official upstream 0.20.3 tarball, with SHA-512 integrity
+in package-lock.json. The npm registry's 0.18.5 release is not used. Source:
+https://docs.sheetjs.com/docs/getting-started/installation/nodejs/
+This release is beyond the patched versions for GHSA-4r6h-8v6p-xvw6 (0.19.3)
+and GHSA-5pgg-2g8v-p4x9 (0.20.2). Tests write actual XLSX bytes, read them using
+the UI options and run the application parser for project/milestone/risk/finance
+sections, dates, formatted numbers, sheet selection, empty/invalid cells and
+truncated archives. Nonnumeric money cells now remain blank with a warning,
+instead of silently becoming zero. These automated tests do not replace hosted
+browser upload verification. New tests run in the existing CI commands.
+
+Local production dependency audits pass at the unchanged high threshold:
+frontend has zero findings; backend has two moderate findings through ExcelJS's
+uuid. No force downgrade, advisory suppression or severity reduction was used.
 
 The initial hosted Stabilization verification job passed every build, typecheck
 and test; dependency-security jobs failed as intended. A live preview probe
