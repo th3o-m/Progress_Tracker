@@ -1,5 +1,7 @@
-// Vercel Services entrypoint. The backend build bundles dependencies into
-// vercel-app.cjs so the deployed function does not need external node_modules.
-const { app } = require('./vercel-app.cjs');
-
-module.exports = app;
+// Diagnostic-only entrypoint: confirms whether Vercel routes requests into this file.
+// No imports, secrets, or database access.
+module.exports = (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.statusCode = 200;
+  res.end(JSON.stringify({ status: 'diagnostic-entrypoint', path: req.url }));
+};
