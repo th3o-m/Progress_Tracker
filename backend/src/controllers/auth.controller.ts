@@ -12,11 +12,18 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
   // A related project can be null (for example, after an access-policy change).
   // Never send incomplete memberships to the project selector.
   const visibleMemberships = (memberships ?? []).filter((membership) => {
-    if (!membership) return false;
-    const relatedProjects = membership.projects;
+    if (!membership || !['admin', 'supervisor', 'finance', 'officer'].includes(membership.role)) return false;
+    const relatedProjects: unknown = membership.projects;
+    const validProject = (value: unknown): boolean => {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+      const project = value as Record<string, unknown>;
+      return typeof project.id === 'string' && project.id.length > 0 &&
+        typeof project.name === 'string' && project.name.trim().length > 0 &&
+        typeof project.status === 'string';
+    };
     return Array.isArray(relatedProjects)
-      ? relatedProjects.some(Boolean)
-      : Boolean(relatedProjects);
+      ? relatedProjects.some(validProject)
+      : validProject(relatedProjects);
   });
   res.json({ ...profile, projects: visibleMemberships });
 }

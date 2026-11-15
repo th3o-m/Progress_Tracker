@@ -23,13 +23,14 @@ const activitySchema = z.object({
   import_id: importId, description: nullableText, status_color: nullableTextMax(50), remarks: nullableText, actual_completion_date: nullableDate,
 }).strict();
 export const createActivitySchema = activitySchema.refine((v) => v.end_date >= v.start_date, { path: ['end_date'], message: 'Must be on or after start_date' });
-export const updateActivitySchema = activitySchema.partial().refine((v) => !v.start_date || !v.end_date || v.end_date >= v.start_date, { path: ['end_date'], message: 'Must be on or after start_date' });
+// Zod 4 applies nested defaults even inside optional fields. PATCH must not reset omitted values.
+export const updateActivitySchema = activitySchema.partial().extend({ progress_pct: activitySchema.shape.progress_pct.unwrap().optional() }).refine((v) => !v.start_date || !v.end_date || v.end_date >= v.start_date, { path: ['end_date'], message: 'Must be on or after start_date' });
 
 export const createProgressSchema = z.object({ activity_id: uuid, progress_pct: progress, status: text.max(50), narrative: text, report_date: date, import_id: importId, executive_summary: nullableText, status_color: nullableTextMax(50), remarks: nullableText, reporting_period: nullableTextMax(100) }).strict();
 export const updateProgressSchema = createProgressSchema.omit({ activity_id: true }).partial().refine((v) => Object.keys(v).length > 0, 'At least one field is required');
 
 export const createChallengeSchema = z.object({ activity_id: uuid, challenge_type: text.max(100), description: text, mitigation_plan: optionalText, resolved: z.boolean().default(false), import_id: importId, status_color: nullableTextMax(50), responsible_officer: importId, due_date: nullableDate }).strict();
-export const updateChallengeSchema = createChallengeSchema.omit({ activity_id: true }).partial().refine((v) => Object.keys(v).length > 0, 'At least one field is required');
+export const updateChallengeSchema = createChallengeSchema.omit({ activity_id: true }).partial().extend({ resolved: createChallengeSchema.shape.resolved.unwrap().optional() }).refine((v) => Object.keys(v).length > 0, 'At least one field is required');
 
 export const createFinancialSchema = z.object({ activity_id: uuid, expense_category: text.max(100), amount: z.coerce.number().nonnegative().multipleOf(0.01), description: text, receipt_url: z.string().url().nullable().optional(), import_id: importId, approved_budget: nullableNumber.refine((value) => value == null || value >= 0, 'Number must be greater than or equal to 0'), balance: nullableNumber, percentage_utilised: nullableNumber, remarks: nullableText }).strict();
 export const updateFinancialSchema = createFinancialSchema.partial().refine((v) => Object.keys(v).length > 0, 'At least one field is required');
@@ -50,9 +51,9 @@ export const reportImportSchema = z.object({
   import_status: nullableTextMax(50).default('completed'),
   blocking_errors: optionalJsonArray,
   warnings: optionalJsonArray,
-  preview_data: z.record(z.unknown()).nullable().optional(),
-  raw_data: z.record(z.unknown()).nullable().optional(),
-  raw_preview_json: z.record(z.unknown()).optional(),
+  preview_data: z.record(z.string(), z.unknown()).nullable().optional(),
+  raw_data: z.record(z.string(), z.unknown()).nullable().optional(),
+  raw_preview_json: z.record(z.string(), z.unknown()).optional(),
   project_name: nullableTextMax(255),
   project_manager: nullableTextMax(255),
   start_date: nullableDate,
@@ -101,7 +102,7 @@ const projectSchema = z.object({
   status: z.enum(['active', 'completed', 'on_hold', 'cancelled']).default('active'),
 }).strict();
 export const createProjectSchema = projectSchema.extend({ source_project_id: uuid.optional() }).refine((v) => !v.start_date || !v.end_date || v.end_date >= v.start_date, { path: ['end_date'], message: 'Must be on or after start_date' });
-export const updateProjectSchema = projectSchema.partial().refine((v) => Object.keys(v).length > 0, 'At least one field is required').refine((v) => !v.start_date || !v.end_date || v.end_date >= v.start_date, { path: ['end_date'], message: 'Must be on or after start_date' });
+export const updateProjectSchema = projectSchema.partial().extend({ status: projectSchema.shape.status.unwrap().optional() }).refine((v) => Object.keys(v).length > 0, 'At least one field is required').refine((v) => !v.start_date || !v.end_date || v.end_date >= v.start_date, { path: ['end_date'], message: 'Must be on or after start_date' });
 export const addProjectMemberSchema = z.object({ email: z.string().trim().email().transform((v) => v.toLowerCase()), role: z.enum(roles), district: optionalText }).strict();
 export const updateProjectMemberSchema = z.object({ role: z.enum(roles).optional(), district: optionalText }).strict().refine((v) => Object.keys(v).length > 0, 'At least one field is required');
 export const createProjectInvitationSchema = z.object({
