@@ -157,7 +157,10 @@ function rowHasSection(row: Row, labels: string[]): boolean {
 }
 
 function rowHasAnySectionMarker(row: Row): boolean {
-  return row.some((cell) => matchesAlias(cell, ["financial status", "project status", "major risks", "risk status"]));
+  // Section boundaries must be full labels: fuzzy matching treats color codes
+  // such as "O" as substrings of "financial status" and drops valid data rows.
+  const markers = ["financial status", "project status", "major risks", "risk status"];
+  return row.some((cell) => markers.includes(normalizeCell(cell)));
 }
 
 function findLabelValue(rows: Row[], field: keyof typeof fieldAliases): unknown {

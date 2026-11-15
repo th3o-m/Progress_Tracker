@@ -78,3 +78,21 @@ test('truncated XLSX archive is rejected for the upload error handler', () => {
   const bytes = new Uint8Array(XLSX.write(workbook, { type: 'array', bookType: 'xlsx' }));
   assert.throws(() => XLSX.read(bytes.slice(0, 30), { type: 'array', cellDates: true }));
 });
+
+
+test('risk color codes and section words inside descriptions do not truncate import rows', () => {
+  const result = parseWorkbookSheet(roundTrip([
+    ['Project Name', 'Risk regression'],
+    ['Major Risks', 'Color Code', 'Mitigation'],
+    ['Delivery delay', 'O', 'Adjust schedule'],
+    ['Major risks may increase', 'Y', 'Review weekly'],
+    ['Financial Status'],
+    ['Item', 'Approved Budget', 'Expenditure to Date', 'Balance'],
+    ['Equipment', 1000, 250, 750],
+  ]), 'Report', 'risks.xlsx', XLSX.utils);
+  assert.deepEqual(result.risks, [
+    { majorRisk: 'Delivery delay', statusColor: 'O', mitigation: 'Adjust schedule' },
+    { majorRisk: 'Major risks may increase', statusColor: 'Y', mitigation: 'Review weekly' },
+  ]);
+  assert.equal(result.financialRows.length, 1);
+});
