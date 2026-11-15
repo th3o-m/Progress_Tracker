@@ -1,7 +1,8 @@
 # Phase 0 stabilization
 
-Status: IN PROGRESS. Do not merge or promote this branch while a gate below is
-unverified or failing. Existing production routing is already repaired.
+Status: STAGING VERIFIED. Apply the database hardening migration to production
+as part of the controlled release, then run the production checks below.
+Existing production routing is already repaired.
 
 ## Reproducible verification
 
@@ -85,11 +86,13 @@ commit separately so the next main deployment does not reintroduce the defect.
 ## Current evidence and gaps
 
 - Existing production: direct health 200 JSON and unauthenticated account 401 JSON.
-- Local suite: 15 HTTP integration cases plus 6 validation regressions; 15 frontend regressions including 4 binary workbook import tests.
+- Local suite: 15 HTTP integration cases plus 6 validation regressions; 16
+  frontend regressions including 5 binary workbook import tests.
 - Authentication code uses Supabase getUser(token), then requires an active profile.
 - Membership middleware constrains both project ID and authenticated user ID;
   nested record lookup additionally constrains project_id. Org admin does not bypass it.
-- Hosted isolated staging: blocked on test project/credentials and test sign-in.
+- Hosted isolated staging: passed on 15 November 2026 against a separate free
+  Supabase project and the exact stabilization preview.
 - Dependency security: high/critical findings remediated; two moderate ExcelJS/uuid findings remain below the unchanged CI threshold.
 - Hosted CI results must be checked on the pushed commit; local success is not CI success.
 
@@ -117,10 +120,37 @@ Local production dependency audits pass at the unchanged high threshold:
 frontend has zero findings; backend has two moderate findings through ExcelJS's
 uuid. No force downgrade, advisory suppression or severity reduction was used.
 
-The initial hosted Stabilization verification job passed every build, typecheck
-and test; dependency-security jobs failed as intended. A live preview probe
-returned 500 despite build READY. Runtime logs identify missing FRONTEND_URL,
-SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY. This is a configuration gate, not a
-module-packaging regression. The user explicitly chose to keep hosted staging
-blocked until a separate test project is available. Do not supply dummy keys and
-call staging verified, or reuse production secrets to bypass this gate.
+The final staging preview uses branch-scoped Preview variables and the isolated
+Progress_Tracker_Staging project. Production variable metadata remained
+unchanged. Health returned 200 JSON and unauthenticated account requests returned
+401 JSON. A confirmed active account signed in successfully, loaded only its
+project and received JSON 404 responses for a foreign project, its activities,
+and its import endpoint. Officer-only role checks returned JSON 403 responses.
+Missing and invalid tokens returned JSON 401 responses. Foreign project PATCH
+and import POST attempts returned JSON 404 and created no records.
+
+A synthetic XLSX file was uploaded through the deployed browser UI. The import
+created one report snapshot, activity at 50 percent, progress update, orange risk,
+financial entry (1000 budget, 250 spent, 750 balance), and financial report. The
+database matched every expected value with no blocking errors or warnings.
+During this check an orange color code exposed a parser bug that truncated risk
+rows; the fix has a regression test and the same live import passed afterward.
+
+Runtime logs for the final preview contain no 500 responses, missing environment
+configuration, missing modules, or function invocation failures. The temporary
+automation account was disabled and its Vercel access link revoked after testing.
+
+Migration 0025 moves the three SECURITY DEFINER helpers out of the exposed
+public schema. Anonymous execution is revoked, authenticated execution remains
+only where RLS needs it, and the Auth trigger retains its function dependency.
+After applying it to staging, the Supabase function-permission warnings cleared
+and RLS still returned one accessible project and zero foreign projects. The only
+remaining security-advisor warning is leaked-password protection, which Supabase
+documents as available on Pro plans and above; this project is on the Free plan.
+Use strong generated passwords and revisit the setting if the plan changes.
+
+Before production verification, apply
+`0025_harden_security_definer_functions.sql` to the production database. Record
+the pre-migration function definitions and privileges so the schema move can be
+reversed if needed. Then deploy the tested commit and repeat health, 401, sign-in,
+project loading and reporting checks.
