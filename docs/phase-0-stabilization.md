@@ -1,8 +1,8 @@
 # Phase 0 stabilization
 
-Status: STAGING VERIFIED. Apply the database hardening migration to production
-as part of the controlled release, then run the production checks below.
-Existing production routing is already repaired.
+Status: READY FOR MERGE. Staging, CI and production database prerequisites are
+verified. Run the post-deployment production application checks below after the
+tested commit is released. Existing production routing is already repaired.
 
 ## Reproducible verification
 
@@ -94,7 +94,7 @@ commit separately so the next main deployment does not reintroduce the defect.
 - Hosted isolated staging: passed on 15 November 2026 against a separate free
   Supabase project and the exact stabilization preview.
 - Dependency security: high/critical findings remediated; two moderate ExcelJS/uuid findings remain below the unchanged CI threshold.
-- Hosted CI results must be checked on the pushed commit; local success is not CI success.
+- Hosted CI passed on the pushed commit before release.
 
 ### Audit follow-up
 
@@ -149,8 +149,17 @@ remaining security-advisor warning is leaked-password protection, which Supabase
 documents as available on Pro plans and above; this project is on the Free plan.
 Use strong generated passwords and revisit the setting if the plan changes.
 
-Before production verification, apply
-`0025_harden_security_definer_functions.sql` to the production database. Record
-the pre-migration function definitions and privileges so the schema move can be
-reversed if needed. Then deploy the tested commit and repeat health, 401, sign-in,
-project loading and reporting checks.
+On 16 November 2026, production received the already-tested database
+prerequisites before code release. Migration 0024 installed atomic invitation
+redemption with execution limited to `service_role`; migration 0025 hardened
+the privileged helpers; and migration 0026 restored three missing invitation RLS
+policies detected as schema drift. No application rows were changed. Production
+RLS still returned the signed-in member's project, the Auth trigger retained its
+private function dependency, and the Supabase security advisor cleared both the
+function and policy findings.
+
+If database rollback is required, restore the three helper functions to the
+`public` schema with their prior grants only after rolling application traffic
+back, and remove the invitation policies only if restoring the exact prior
+database state is necessary. Prefer keeping the tightened grants and policies
+when the incident is unrelated to authorization.
