@@ -1,0 +1,1 @@
+{"nodes": [{"id": "agents_graphify_workflow", "label": "Graph-first codebase navigation", "file_type": "rationale", "source_file": "AGENTS.md", "source_location": "graphify", "rationale": "Query the persistent graph before raw codebase searches; use path, explain and section for scoped context and update after code changes."}], "edges": [], "hyperedges": []}

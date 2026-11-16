@@ -1,0 +1,1 @@
+{"nodes": [{"id": "frontend_index_application_shell", "label": "Projectt Tracker HTML shell", "file_type": "document", "source_file": "frontend/index.html", "source_location": "lines 1-22", "description": "English HTML entry with root mount, /src/main.tsx module, viewport metadata and noindex/nofollow robots directive."}], "edges": [], "hyperedges": []}

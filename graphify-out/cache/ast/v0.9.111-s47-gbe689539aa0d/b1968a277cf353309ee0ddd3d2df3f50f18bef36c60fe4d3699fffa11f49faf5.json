@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_backend_supabase_migrations_0019_drop_aux_table_sql", "label": "0019_drop_aux_table.sql", "file_type": "code", "source_file": "backend/supabase/migrations/0019_drop_aux_table.sql", "source_location": null}], "edges": []}
