@@ -1,7 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { CheckCircle2, Eye, EyeOff, KeyRound, LogIn, Mail, UserPlus } from "lucide-react";
+import { ArrowRight, ChartNoAxesColumnIncreasing, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 import { ThemeToggle } from "./ThemeToggle";
+
+import "./Login.css";
 
 interface LoginProps {
   onSignedIn: () => void;
@@ -138,62 +140,54 @@ export function Login({ onSignedIn, passwordRecovery = false, onPasswordReset, t
     setMessage("Account created. Check your email and follow the confirmation link, then sign in.");
   }
 
+  const headings = {
+    login: "Welcome back.",
+    signup: "Create an account.",
+    forgot: "Reset your password.",
+    reset: "Choose a new password.",
+  };
+  const instructions = {
+    login: "Sign in to your project workspace.",
+    signup: "Enter your details to get started.",
+    forgot: "Enter your account email to receive a recovery link.",
+    reset: "Use at least 8 characters for your new password.",
+  };
+
   return (
-    <main className="min-h-screen bg-background flex items-center justify-center p-6">
-      <section className="w-full max-w-md bg-card border border-border rounded-lg shadow-sm p-8">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary">
-            <span className="text-sm font-extrabold text-primary-foreground">PT</span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-foreground font-bold">Projectt Tracker</h1>
-            <p className="text-muted-foreground text-xs">Organization-wide employee access</p>
-          </div>
-          <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+    <main className="auth-landing">
+      <section className="auth-hero" aria-label="Project Tracker">
+        <div className="auth-brand">
+          <span className="auth-mark"><ChartNoAxesColumnIncreasing aria-hidden="true" /></span>
+          Project Tracker
         </div>
-
-        {isSupabaseConfigured ? (
-          <>
-            {(mode === "login" || mode === "signup") ? <div className="grid grid-cols-2 rounded-md bg-secondary p-1 mb-6" role="tablist" aria-label="Account access">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mode === "login"}
-                onClick={() => switchMode("login")}
-                className={`rounded px-3 py-2 text-sm font-semibold transition-colors ${mode === "login" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
-              >
-                Sign in
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mode === "signup"}
-                onClick={() => switchMode("signup")}
-                className={`rounded px-3 py-2 text-sm font-semibold transition-colors ${mode === "signup" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
-              >
-                Create account
-              </button>
-            </div> : (
-              <div className="mb-6">
-                <h2 className="font-bold text-foreground">{mode === "forgot" ? "Reset your password" : "Choose a new password"}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {mode === "forgot" ? "Enter your account email and we’ll send you a recovery link." : "Your new password must contain at least 8 characters."}
-                </p>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="auth-intro">
+          <h1>See your project<br /><em>take shape.</em></h1>
+          <p>Track milestones, budgets, and risks in one shared workspace.</p>
+        </div>
+        <div className="auth-art" aria-hidden="true">
+          <div className="auth-blocks"><i /><i /><i /><i /><i /></div>
+        </div>
+      </section>
+      <section className="auth-pane" aria-labelledby="auth-title">
+        <ThemeToggle theme={theme} onToggle={onToggleTheme} className="auth-theme" />
+        <div className="auth-form-wrap">
+          <h2 id="auth-title">{isSupabaseConfigured ? headings[mode] : "Explore the workspace."}</h2>
+          {isSupabaseConfigured ? (
+            <>
+            <p className="auth-instructions">{instructions[mode]}</p>
+            <form onSubmit={handleSubmit} className="auth-form">
               {mode === "signup" && (
                 <>
                   <label className="block text-sm text-foreground">
                     Full name
                     <input
                       type="text"
+                      placeholder="Your full name"
                       autoComplete="name"
                       required
                       value={fullName}
                       onChange={(event) => setFullName(event.target.value)}
-                      className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-[#1a3a6b]"
+                      className="auth-input"
                     />
                   </label>
                   <label className="block text-sm text-foreground">
@@ -203,7 +197,7 @@ export function Login({ onSignedIn, passwordRecovery = false, onPasswordReset, t
                       autoComplete="tel"
                       value={phone}
                       onChange={(event) => setPhone(event.target.value)}
-                      className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-[#1a3a6b]"
+                      className="auth-input"
                     />
                   </label>
                 </>
@@ -213,11 +207,12 @@ export function Login({ onSignedIn, passwordRecovery = false, onPasswordReset, t
                 Email
                 <input
                   type="email"
+                  placeholder="you@example.com"
                   autoComplete="email"
                   required
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-[#1a3a6b]"
+                  className="auth-input"
                 />
               </label>}
 
@@ -226,12 +221,13 @@ export function Login({ onSignedIn, passwordRecovery = false, onPasswordReset, t
                 <span className="relative mt-1 block">
                   <input
                     type={showPassword ? "text" : "password"}
+                    placeholder={mode === "login" ? "Enter your password" : "At least 8 characters"}
                     autoComplete={mode === "login" ? "current-password" : "new-password"}
                     minLength={mode === "signup" || mode === "reset" ? 8 : undefined}
                     required
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 pr-10 outline-none focus:ring-2 focus:ring-[#1a3a6b]"
+                    className="auth-input auth-password"
                   />
                   <button
                     type="button"
@@ -246,7 +242,7 @@ export function Login({ onSignedIn, passwordRecovery = false, onPasswordReset, t
 
               {mode === "login" && (
                 <div className="-mt-2 text-right">
-                  <button type="button" onClick={() => switchMode("forgot")} className="text-sm font-semibold text-[#1a3a6b] hover:underline">
+                  <button type="button" onClick={() => switchMode("forgot")} className="auth-link">
                     Forgot password?
                   </button>
                 </div>
@@ -262,7 +258,7 @@ export function Login({ onSignedIn, passwordRecovery = false, onPasswordReset, t
                     required
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
-                    className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-[#1a3a6b]"
+                    className="auth-input"
                   />
                 </label>
               )}
@@ -278,32 +274,38 @@ export function Login({ onSignedIn, passwordRecovery = false, onPasswordReset, t
               <button
                 type="submit"
                 disabled={submitting || (Boolean(message) && mode !== "login")}
-                className="w-full flex items-center justify-center gap-2 rounded-md bg-[#1a3a6b] px-4 py-2.5 text-white font-semibold disabled:opacity-60"
+                className="auth-primary"
               >
-                {mode === "login" && <LogIn className="w-4 h-4" />}
-                {mode === "signup" && <UserPlus className="w-4 h-4" />}
-                {mode === "forgot" && <Mail className="w-4 h-4" />}
-                {mode === "reset" && <KeyRound className="w-4 h-4" />}
                 {submitting ? "Please wait..." : mode === "login" ? "Sign in" : mode === "signup" ? "Create account" : mode === "forgot" ? "Send reset link" : "Update password"}
+                <ArrowRight size={17} aria-hidden="true" />
               </button>
 
-              {(message || mode === "forgot") && (
-                <button type="button" onClick={() => switchMode("login")} className="w-full text-sm font-semibold text-[#1a3a6b] hover:underline">
+              {mode === "forgot" && (
+                <button type="button" onClick={() => switchMode("login")} className="auth-link">
                   Return to sign in
                 </button>
               )}
             </form>
+            {(mode === "login" || mode === "signup") && (
+              <p className="auth-switch">
+                {mode === "login" ? "New to Project Tracker?" : "Already have an account?"}{" "}
+                <button type="button" disabled={submitting} className="auth-link" onClick={() => switchMode(mode === "login" ? "signup" : "login")}>
+                  {mode === "login" ? "Create an account" : "Sign in"}
+                </button>
+              </p>
+            )}
           </>
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Supabase authentication is not configured. Add the frontend environment variables from <code>frontend/.env.example</code> to enable account creation and login.
             </p>
-            <button type="button" onClick={onSignedIn} className="w-full rounded-md bg-[#1a3a6b] px-4 py-2.5 text-white font-semibold">
+            <button type="button" onClick={onSignedIn} className="auth-primary">
               Continue in demo mode
             </button>
           </div>
         )}
+        </div>
       </section>
     </main>
   );
