@@ -281,7 +281,7 @@ export default function App() {
             </div>
             {sidebarOpen && (
               <div className="min-w-0 flex-1 overflow-hidden">
-                <p style={{ color: "var(--sidebar-foreground)", fontWeight: 700, fontSize: "0.8rem", lineHeight: 1.2 }}>Project Tracker</p>
+                <p className="workspace-brand" style={{ color: "var(--sidebar-foreground)", fontSize: "0.8rem", lineHeight: 1.2 }}>Project Tracker</p>
                 <p className="truncate" style={{ color: "var(--sidebar-foreground)", fontSize: "0.65rem", opacity: 0.6, lineHeight: 1.2 }}>{selectedMembership?.projects.name || "Project Dashboard"}</p>
               </div>
             )}
@@ -364,7 +364,7 @@ export default function App() {
         {/* Top bar */}
         <header className="flex items-center justify-between px-6 bg-card border-b border-border" style={{ height: 64, flexShrink: 0 }}>
           <div>
-            <h1 className="text-foreground" style={{ fontSize: "1rem", fontWeight: 700 }}>{pageTitle[page]}</h1>
+            <h1 className="workspace-title text-foreground">{pageTitle[page]}</h1>
             <p className="text-muted-foreground" style={{ fontSize: "0.72rem" }}>
               {selectedMembership?.projects.name || "No project selected"} — Republic of Botswana &nbsp;|&nbsp; {new Date().toLocaleDateString("en-BW", { year: "numeric", month: "long", day: "numeric" })}
             </p>

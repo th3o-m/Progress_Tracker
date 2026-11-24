@@ -504,9 +504,9 @@
     "semantic_hash": ""
   },
   "frontend/src/app/App.tsx": {
-    "mtime": 1795523984.2904453,
-    "seen": 1795524016.6721869,
-    "ast_hash": "90cc8f8cb77dcbf467af0267c268a2e8",
+    "mtime": 1795524384.9104068,
+    "seen": 1795524405.1731944,
+    "ast_hash": "44a3807354a7305725a8ddf5f95bcf08",
     "semantic_hash": ""
   },
   "frontend/src/app/ProjectDataContext.tsx": {

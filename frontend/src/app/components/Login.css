@@ -14,11 +14,11 @@
   background: radial-gradient(ellipse at 80% 88%, #397ded 0, transparent 48%),
     linear-gradient(155deg, #101e60 0%, #1a359c 45%, #294fcc 77%, #152e8a 100%);
 }
-.auth-brand { display: flex; align-items: center; gap: 11px; font-size: 19px; font-weight: 650; letter-spacing: -.045em; }
+.auth-brand { display: flex; align-items: center; gap: 11px; font-size: 19px; font-weight: 650; letter-spacing: var(--brand-tracking); }
 .auth-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: #193693; background: #e6edff; }
 .auth-intro { position: relative; z-index: 1; margin-top: clamp(52px, 10vh, 110px); }
 .auth-intro h1 { margin: 0; font-size: clamp(48px, 5.4vw, 90px); font-weight: 550; line-height: .99; letter-spacing: -.066em; }
-.auth-intro em { color: #c3e1ff; font-family: Georgia, serif; font-weight: 400; letter-spacing: -.072em; }
+.auth-intro em { color: #c3e1ff; font-family: var(--font-editorial); font-weight: 400; letter-spacing: -.072em; }
 .auth-intro p { margin: 22px 0 0; max-width: 38ch; color: #e0eaff; font-size: 17px; line-height: 1.55; }
 .auth-timeline {
   position: relative;
@@ -75,7 +75,7 @@
 .auth-pane { position: relative; display: grid; place-items: center; padding: 76px 32px; }
 .auth-theme { position: absolute; top: 22px; right: 24px; }
 .auth-form-wrap { width: 100%; max-width: 385px; }
-.auth-form-wrap h2 { font-size: clamp(32px, 3.3vw, 48px); font-weight: 620; line-height: 1.06; letter-spacing: -.062em; margin-bottom: 12px; }
+.auth-form-wrap h2 { font-size: clamp(32px, 3.3vw, 48px); font-weight: 620; line-height: 1.06; letter-spacing: var(--title-tracking); margin-bottom: 12px; }
 .auth-instructions, .auth-switch { color: var(--muted-foreground); font-size: 15px; }
 .auth-form { margin-top: 32px; display: grid; gap: 17px; }
 .auth-form label { font-weight: 550; }
