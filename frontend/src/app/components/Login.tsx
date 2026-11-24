@@ -274,7 +274,7 @@ export function Login({ onSignedIn, passwordRecovery = false, onPasswordReset, t
               <button
                 type="submit"
                 disabled={submitting || (Boolean(message) && mode !== "login")}
-                className="auth-primary"
+                className={mode === "login" || mode === "signup" ? "auth-primary auth-account-submit" : "auth-primary"}
               >
                 {submitting ? "Please wait..." : mode === "login" ? "Sign in" : mode === "signup" ? "Create account" : mode === "forgot" ? "Send reset link" : "Update password"}
                 <ArrowRight size={17} aria-hidden="true" />
