@@ -161,11 +161,23 @@ export function Login({ onSignedIn, passwordRecovery = false, onPasswordReset, t
           Project Tracker
         </div>
         <div className="auth-intro">
-          <h1>See your project<br /><em>take shape.</em></h1>
+          <h1>Every milestone<br /><em>in sight.</em></h1>
           <p>Track milestones, budgets, and risks in one shared workspace.</p>
         </div>
-        <div className="auth-art" aria-hidden="true">
-          <div className="auth-blocks"><i /><i /><i /><i /><i /></div>
+        <div className="auth-timeline" aria-hidden="true">
+          <div className="auth-timeline-heading">
+            <span>Work plan</span>
+            <span>Project timeline</span>
+          </div>
+          <div className="auth-timeline-grid">
+            <div className="auth-timeline-scale"><span>Jun</span><span>Jul</span><span>Aug</span></div>
+            {["Planning", "Delivery", "Review"].map((phase) => (
+              <div className="auth-timeline-row" key={phase}>
+                <span>{phase}</span>
+                <div className="auth-timeline-track"><i /></div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
       <section className="auth-pane" aria-labelledby="auth-title">
