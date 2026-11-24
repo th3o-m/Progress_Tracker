@@ -6,24 +6,12 @@ import { useProjectActivities, useProjectData, useProjectProgressUpdates, type P
 import { EmptyState } from "./EmptyState";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
-import { Skeleton } from "./ui/skeleton";
+import { LoadingScreen } from "./LoadingScreen";
 
 const colors = ["#1a3a6b", "#0e7490", "#16a34a", "#d97706", "#c0392b"];
 
 interface ProgressTrackingProps {
   onOpenActivity: (activityId: string) => void;
-}
-
-function ProgressSkeleton() {
-  return (
-    <div className="space-y-5" aria-busy="true">
-      <div className="grid grid-cols-3 gap-4">
-        {Array.from({ length: 3 }).map((_, index) => <div key={index} className="rounded-md border border-border bg-card p-5"><Skeleton className="h-8 w-16" /><Skeleton className="mt-2 h-3 w-32" /></div>)}
-      </div>
-      <div className="grid grid-cols-2 gap-4"><Skeleton className="h-[296px] rounded-md" /><Skeleton className="h-[296px] rounded-md" /></div>
-      <section className="rounded-md border border-border bg-card p-5"><Skeleton className="mb-5 h-4 w-48" /><div className="space-y-4">{Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="h-14 w-full" />)}</div></section>
-    </div>
-  );
 }
 
 export function ProgressTracking({ onOpenActivity }: ProgressTrackingProps) {
@@ -37,7 +25,7 @@ export function ProgressTracking({ onOpenActivity }: ProgressTrackingProps) {
   const loading = activitiesLoading || progressLoading;
   const error = activitiesError || progressError;
 
-  if (loading) return <ProgressSkeleton />;
+  if (loading) return <LoadingScreen embedded message="Loading progress updates…" />;
   if (error) return <p className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>;
 
   const statusData = Array.from(new Set(progress.map((item) => item.status))).map((status, index) => ({ name: status, value: progress.filter((item) => item.status === status).length, color: colors[index % colors.length] }));

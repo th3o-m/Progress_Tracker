@@ -3,7 +3,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { AlertTriangle, ArrowRight, CheckCircle2, Clock, ListTodo } from "lucide-react";
 import { apiRequest } from "../../lib/api";
 import { EmptyState } from "./EmptyState";
-import { Skeleton } from "./ui/skeleton";
+import { LoadingScreen } from "./LoadingScreen";
 
 const badge: Record<string, string> = {
   Completed: "border border-chart-3/30 bg-chart-3/10 text-foreground",
@@ -56,22 +56,6 @@ interface OverviewProps {
   onOpenActivity?: (activityId: string) => void;
 }
 
-function OverviewSkeleton() {
-  return (
-    <div className="space-y-6" aria-busy="true">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 5 }).map((_, index) => <div key={index} className="rounded-md border border-border bg-card p-4 shadow-sm"><Skeleton className="mb-3 h-9 w-9" /><Skeleton className="h-8 w-16" /><Skeleton className="mt-2 h-3 w-24" /></div>)}
-      </div>
-      <Skeleton className="h-24 rounded-md" />
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2"><Skeleton className="h-[294px] rounded-md" /><Skeleton className="h-[294px] rounded-md" /></div>
-      <section className="rounded-md border border-border bg-card shadow-sm">
-        <div className="border-b border-border px-5 py-4"><Skeleton className="h-4 w-40" /></div>
-        <div className="space-y-3 p-5">{Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="h-8 w-full" />)}</div>
-      </section>
-    </div>
-  );
-}
-
 export function Overview({ projectId, onViewChallenges, onOpenActivity }: OverviewProps) {
   const [summary, setSummary] = useState<ProjectSummary>(emptySummary);
   const [loading, setLoading] = useState(true);
@@ -109,7 +93,7 @@ export function Overview({ projectId, onViewChallenges, onOpenActivity }: Overvi
     onOpenActivity?.(activityId);
   }
 
-  if (loading) return <OverviewSkeleton />;
+  if (loading) return <LoadingScreen embedded message="Loading project overview…" />;
 
   if (error) {
     return (

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, LoaderCircle, Save } from "lucide-react";
 import { apiRequest } from "../../lib/api";
 import { Button } from "../components/ui/button";
-import { Skeleton } from "../components/ui/skeleton";
+import { LoadingScreen } from "../components/LoadingScreen";
 import type { Activity, ProjectMember, ProjectRole } from "../ProjectDataContext";
 
 interface CurrentUserResponse {
@@ -51,20 +51,6 @@ function resolveOfficerName(activity: Activity, members: ProjectMember[]): strin
   if (member?.profiles?.full_name) return member.profiles.full_name;
   if (member?.profiles?.email) return member.profiles.email;
   return activity.responsible_officer;
-}
-
-function LoadingState() {
-  return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <Skeleton className="h-10 w-40" />
-        <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <Skeleton className="h-[420px] rounded-md" />
-          <Skeleton className="h-[420px] rounded-md" />
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export function ActivityPage({ projectId, activityId, fromPage }: ActivityPageProps) {
@@ -187,7 +173,7 @@ export function ActivityPage({ projectId, activityId, fromPage }: ActivityPagePr
     window.location.href = returnUrl;
   }
 
-  if (loading) return <LoadingState />;
+  if (loading) return <LoadingScreen message="Loading activity…" />;
 
   if (error || !activity || !draft) {
     return (

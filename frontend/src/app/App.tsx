@@ -11,7 +11,7 @@ import { normalizeProjectMemberships } from "../lib/projectMemberships";
 import { ProjectSwitcher, type ProjectMembership } from "./components/ProjectSwitcher";
 import { ProjectDataProvider } from "./ProjectDataContext";
 import { ThemeToggle } from "./components/ThemeToggle";
-import "./components/LoadingScreen.css";
+import { LoadingScreen } from "./components/LoadingScreen";
 import { NotificationsBell } from "./components/NotificationsBell";
 import { ActivityPage } from "./pages/ActivityPage";
 import type { AcceptedInvitationProject } from "./pages/InvitationPage";
@@ -66,20 +66,6 @@ function getInitialTheme(): Theme {
   const storedTheme = localStorage.getItem("theme");
   if (storedTheme === "light" || storedTheme === "dark") return storedTheme;
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
-function LoadingScreen({ message, embedded = false }: { message: string; embedded?: boolean }) {
-  return (
-    <div className={embedded ? "tracker-loading tracker-loading--embedded" : "tracker-loading"} role="status">
-      <div className="tracker-loading__chart" aria-hidden="true">
-        {[0, 1, 2, 3, 4].map((index) => (
-          <span key={index} style={{ height: `${36 + index * 16}%`, animationDelay: `${index * 140}ms` }} />
-        ))}
-      </div>
-      <p className="tracker-loading__brand">Project Tracker</p>
-      <p className="tracker-loading__message">{message}</p>
-    </div>
-  );
 }
 
 const navItems: { id: Page; label: string; icon: typeof LayoutDashboard }[] = [

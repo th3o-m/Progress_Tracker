@@ -4,7 +4,7 @@ import { apiRequest } from "../../lib/api";
 import { useProjectActivities, useProjectData, useProjectFinancialReports, useProjectMembers, type FinancialReport } from "../ProjectDataContext";
 import { EmptyState } from "./EmptyState";
 import { ImportSpreadsheet } from "./ImportSpreadsheet";
-import { Skeleton } from "./ui/skeleton";
+import { LoadingScreen } from "./LoadingScreen";
 import type { ProjectMembership } from "./ProjectSwitcher";
 
 type Tab = "activity" | "progress" | "challenge" | "financial" | "import";
@@ -32,13 +32,6 @@ const blank = {
   amountSpent: "",
   financialNotes: "",
 };
-
-function EntryFormSkeleton() {
-  return <div className="space-y-5 p-6" aria-busy="true">
-    <div className="grid grid-cols-2 gap-4">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="space-y-2"><Skeleton className="h-3 w-28" /><Skeleton className="h-10 w-full" /></div>)}</div>
-    <div className="flex justify-end gap-3"><Skeleton className="h-9 w-20" /><Skeleton className="h-9 w-28" /></div>
-  </div>;
-}
 
 export function DataEntry({ memberships = [] }: { memberships?: ProjectMembership[] }) {
   const { projectId, role, refresh } = useProjectData();
@@ -110,10 +103,10 @@ export function DataEntry({ memberships = [] }: { memberships?: ProjectMembershi
       {tab === "import" ? (
         <div className="p-6"><ImportSpreadsheet memberships={memberships} /></div>
       ) : (activitiesLoading && requiresActivities || (tab === "activity" && canCreateActivity && membersLoading)) ? (
-        <EntryFormSkeleton />
+        <LoadingScreen embedded message="Loading entry form…" />
       ) : requiresActivities && activities.length === 0 ? (
         <div className="p-6"><EmptyState message="Create an activity before entering activity-linked data." /></div>
-      ) : tab === "financial" && financialLoading ? <EntryFormSkeleton /> : (
+      ) : tab === "financial" && financialLoading ? <LoadingScreen embedded message="Loading entry form…" /> : (
       <form onSubmit={submit} className="space-y-5 p-6">
         {tab === "activity" && <div className="grid grid-cols-2 gap-4">
           <label className="text-sm">Code (optional)<input value={form.code} onChange={(e) => set("code", e.target.value)} className={input} /></label>
