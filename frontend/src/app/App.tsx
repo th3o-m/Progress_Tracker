@@ -11,7 +11,7 @@ import { normalizeProjectMemberships } from "../lib/projectMemberships";
 import { ProjectSwitcher, type ProjectMembership } from "./components/ProjectSwitcher";
 import { ProjectDataProvider } from "./ProjectDataContext";
 import { ThemeToggle } from "./components/ThemeToggle";
-import { Skeleton } from "./components/ui/skeleton";
+import "./components/LoadingScreen.css";
 import { NotificationsBell } from "./components/NotificationsBell";
 import { ActivityPage } from "./pages/ActivityPage";
 import type { AcceptedInvitationProject } from "./pages/InvitationPage";
@@ -68,15 +68,18 @@ function getInitialTheme(): Theme {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-function PageLoadingFallback() {
-  return <div className="space-y-4" aria-busy="true">
-    <Skeleton className="h-8 w-48" />
-    <div className="grid gap-4 md:grid-cols-2">
-      <Skeleton className="h-36" />
-      <Skeleton className="h-36" />
+function LoadingScreen({ message, embedded = false }: { message: string; embedded?: boolean }) {
+  return (
+    <div className={embedded ? "tracker-loading tracker-loading--embedded" : "tracker-loading"} role="status">
+      <div className="tracker-loading__chart" aria-hidden="true">
+        {[0, 1, 2, 3, 4].map((index) => (
+          <span key={index} style={{ height: `${36 + index * 16}%`, animationDelay: `${index * 140}ms` }} />
+        ))}
+      </div>
+      <p className="tracker-loading__brand">Project Tracker</p>
+      <p className="tracker-loading__message">{message}</p>
     </div>
-    <Skeleton className="h-48" />
-  </div>;
+  );
 }
 
 const navItems: { id: Page; label: string; icon: typeof LayoutDashboard }[] = [
@@ -226,7 +229,7 @@ export default function App() {
   }
 
   if (authenticated === null) {
-    return <div className="min-h-screen bg-background flex items-center justify-center p-6" aria-busy="true"><div className="w-full max-w-sm space-y-4"><Skeleton className="mx-auto h-10 w-10 rounded-full" /><Skeleton className="h-5 w-full" /><Skeleton className="mx-auto h-4 w-2/3" /></div></div>;
+    return <LoadingScreen message="Opening your workspace…" />;
   }
 
   if (!authenticated) {
@@ -246,7 +249,7 @@ export default function App() {
 
   if (presentationProjectId) {
     return (
-      <Suspense fallback={<div className="min-h-screen bg-background p-8" aria-busy="true"><Skeleton className="mb-6 h-10 w-56" /><Skeleton className="h-[70vh] w-full" /></div>}>
+      <Suspense fallback={<LoadingScreen message="Opening presentation…" />}>
         <ProjectPresentation projectId={presentationProjectId} />
       </Suspense>
     );
@@ -254,7 +257,7 @@ export default function App() {
 
   if (invitationToken) {
     return (
-      <Suspense fallback={<div className="min-h-screen bg-background p-8" aria-busy="true"><Skeleton className="mx-auto mt-24 h-48 max-w-xl" /></div>}>
+      <Suspense fallback={<LoadingScreen message="Opening invitation…" />}>
         <InvitationPage token={invitationToken} onAccepted={handleInvitationAccepted} />
       </Suspense>
     );
@@ -433,7 +436,7 @@ export default function App() {
           )}
           {selectedMembership && page === "home" && <Overview projectId={selectedMembership.projects.id} onViewChallenges={() => setPage("challenges")} onOpenActivity={openActivity} />}
           {selectedMembership && page !== "home" && <ProjectDataProvider projectId={selectedMembership.projects.id} role={selectedMembership.role}>
-            <Suspense fallback={<PageLoadingFallback />}>
+            <Suspense fallback={<LoadingScreen embedded message="Loading page…" />}>
             {page === "workplan" && <WorkPlan onOpenActivity={openActivity} />}
             {page === "progress" && <ProgressTracking onOpenActivity={openActivity} />}
             {page === "challenges" && <Challenges />}

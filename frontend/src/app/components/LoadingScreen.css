@@ -1,0 +1,59 @@
+.tracker-loading {
+  display: flex;
+  min-height: 100svh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  color: var(--foreground);
+  background: radial-gradient(ellipse at center, color-mix(in srgb, #b4cde6 18%, transparent), transparent 65%), var(--background);
+}
+
+.tracker-loading--embedded {
+  min-height: min(55svh, 28rem);
+  border-radius: 0.75rem;
+}
+
+.tracker-loading__chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  width: 64px;
+  height: 64px;
+  padding: 14px 11px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #101e60, #304fc5);
+}
+
+/* Adapted from Loading UI Bars: https://www.loading-ui.com/docs/components/bars */
+.tracker-loading__chart span {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(#e6edff, #b4cde6);
+  transform-origin: bottom;
+  animation: tracker-bar 1.2s ease-in-out infinite;
+}
+
+@keyframes tracker-bar {
+  0%, 100% { transform: scaleY(1); opacity: 1; }
+  50% { transform: scaleY(0.6); opacity: 0.65; }
+}
+
+.tracker-loading__brand {
+  margin: 1rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 650;
+  letter-spacing: -0.045em;
+}
+
+.tracker-loading__message {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tracker-loading__chart span { animation: none; }
+}
