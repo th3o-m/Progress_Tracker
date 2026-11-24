@@ -1,17 +1,17 @@
 # Graph Report - Project-Tracker  (2026-11-24)
 
 ## Corpus Check
-- 175 files · ~68,010 words
+- 175 files · ~68,028 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 18 file(s) not represented in the graph (top: (none) 9, .css 8, .toml 1)
 
 ## Summary
-- 1511 nodes · 3289 edges · 130 communities (79 shown, 51 thin omitted)
+- 1512 nodes · 3289 edges · 131 communities (80 shown, 51 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 76 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ba4bfdfe`
+- Built from commit: `4287002f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -51,7 +51,7 @@
 - Form Field Components
 - Status and Toggle Components
 - ImportSpreadsheet
-- Notification Controller
+- notifications.controller.ts
 - Backend TypeScript Configuration
 - Carousel Components
 - Invitation Interface and API
@@ -65,8 +65,8 @@
 - NotificationsBell.tsx
 - report.service.ts
 - Navigation Menu Components
-- dropdown-menu.tsx
-- reports.controller.ts
+- api.ts
+- auth.controller.ts
 - Progress Tracker
 - Project Switcher Memberships
 - Dashboard Design Requirements
@@ -130,6 +130,7 @@
 - react-popper@2.3.0
 - tailwind-merge
 - react-resizable-panels
+- ProjectPresentation.tsx
 - vaul
 
 ## God Nodes (most connected - your core abstractions)
@@ -163,23 +164,23 @@
 - **Release verification layers** — docs_phase_0_stabilization_integration_tests, docs_phase_0_stabilization_hosted_staging, docs_phase_0_stabilization_release_gates [EXTRACTED 1.00]
 - **Planned forecast safety controls** — docs_predictive_intelligence_governance, docs_predictive_intelligence_tenant_isolation, docs_predictive_intelligence_human_review [EXTRACTED 1.00]
 
-## Communities (130 total, 51 thin omitted)
+## Communities (131 total, 51 thin omitted)
 
 ### Community 0 - "ImportSpreadsheet.tsx"
 Cohesion: 0.09
 Nodes (35): chooseDate(), definedPayload(), displayMoney(), displayPercent(), DuplicateMode, existingActivityFor(), existingFinancialFor(), firstOfficerId() (+27 more)
 
 ### Community 1 - "Shared Display Components"
-Cohesion: 0.07
-Nodes (39): AccordionContent(), AccordionItem(), AccordionTrigger(), Avatar(), AvatarFallback(), AvatarImage(), BreadcrumbEllipsis(), BreadcrumbItem() (+31 more)
+Cohesion: 0.06
+Nodes (41): AccordionContent(), AccordionItem(), AccordionTrigger(), Avatar(), AvatarFallback(), AvatarImage(), BreadcrumbEllipsis(), BreadcrumbItem() (+33 more)
 
 ### Community 2 - "Sidebar and Panel Components"
 Cohesion: 0.06
 Nodes (43): Input(), Separator(), Sheet(), SheetContent(), SheetDescription(), SheetFooter(), SheetHeader(), SheetOverlay() (+35 more)
 
 ### Community 3 - "Application Navigation and Authentication"
-Cohesion: 0.07
-Nodes (34): activityRouteFromPath(), App(), Challenges, DataEntry, demoMembership, getInitialTheme(), hasPasswordRecoveryToken(), ImportedDataReview (+26 more)
+Cohesion: 0.08
+Nodes (29): activityRouteFromPath(), App(), Challenges, DataEntry, demoMembership, getInitialTheme(), hasPasswordRecoveryToken(), ImportedDataReview (+21 more)
 
 ### Community 4 - "Imported Data Review"
 Cohesion: 0.07
@@ -190,8 +191,8 @@ Cohesion: 0.16
 Nodes (35): cellText(), compact(), editDistance(), fieldAliases, findLabelValue(), findProjectStatusHeader(), getByHeader(), HeaderMap (+27 more)
 
 ### Community 6 - "Backend Middleware and Configuration"
-Cohesion: 0.15
-Nodes (20): runOverdueTaskNotificationsForAdmin(), EmailMessage, sendEmail(), alreadySentToday(), buildEmail(), completedStatuses, escapeHtml(), getFallbackRecipients() (+12 more)
+Cohesion: 0.16
+Nodes (19): EmailMessage, sendEmail(), alreadySentToday(), buildEmail(), completedStatuses, escapeHtml(), getFallbackRecipients(), getProfiles() (+11 more)
 
 ### Community 7 - "Interactive Input Components"
 Cohesion: 0.07
@@ -199,7 +200,7 @@ Nodes (16): Checkbox(), HoverCardContent(), InputOTP(), InputOTPGroup(), InputOT
 
 ### Community 8 - "http.ts"
 Cohesion: 0.13
-Nodes (26): deleteActivity(), getActivity(), projectAccess(), requireOrgAdmin(), requireRole(), activitiesRouter, membersRouter, usersRouter (+18 more)
+Nodes (26): deleteProfile(), generateReport(), listReports(), projectAccess(), requireOrgAdmin(), requireRole(), activitiesRouter, membersRouter (+18 more)
 
 ### Community 9 - "Scheduled Reminder Delivery"
 Cohesion: 0.08
@@ -218,24 +219,24 @@ Cohesion: 0.07
 Nodes (29): dependencies, class-variance-authority@0.7.1, cmdk@1.1.1, @emotion/styled@11.14.1, lucide-react@0.487.0, @mui/material@7.3.5, @radix-ui/react-context-menu@2.2.6, @radix-ui/react-dropdown-menu@2.1.6 (+21 more)
 
 ### Community 13 - "Dashboard Overview and Challenges"
-Cohesion: 0.14
-Nodes (20): Challenges(), Filter, formatDate(), EmptyState(), LoadingScreen(), badge, emptySummary, OverviewProps (+12 more)
+Cohesion: 0.20
+Nodes (15): Challenges(), Filter, formatDate(), EmptyState(), LoadingScreen(), badge, emptySummary, OverviewProps (+7 more)
 
 ### Community 14 - "Progress Tracking Interface"
-Cohesion: 0.19
-Nodes (15): colors, ProgressTracking(), canEditUpdate(), openUpdate(), ProgressTrackingProps, CommandDialog(), Dialog(), DialogContent() (+7 more)
+Cohesion: 0.13
+Nodes (22): colors, ProgressTracking(), canEditUpdate(), openUpdate(), ProgressTrackingProps, Command(), CommandDialog(), CommandGroup() (+14 more)
 
 ### Community 15 - "Project Settings and Membership"
-Cohesion: 0.18
-Nodes (12): MemberDraft, ProjectInvitation, ActivityDraft, ActivityPage(), ActivityPageProps, CurrentUserResponse, formatDate(), formatText() (+4 more)
+Cohesion: 0.20
+Nodes (11): MemberDraft, ProjectInvitation, ActivityDraft, ActivityPage(), ActivityPageProps, CurrentUserResponse, formatDate(), formatText() (+3 more)
 
 ### Community 16 - "invitations.controller.ts"
-Cohesion: 0.18
-Nodes (16): AcceptanceResult, addDays(), assertUsableInvitation(), assertVisibleInvitation(), createProjectInvitation(), generateUniqueToken(), InvitationRecord, invitationResponse() (+8 more)
+Cohesion: 0.20
+Nodes (19): AcceptanceResult, acceptInvitation(), addDays(), assertUsableInvitation(), assertVisibleInvitation(), createProjectInvitation(), generateUniqueToken(), getInvitationByToken() (+11 more)
 
 ### Community 17 - "Request Validation Schemas"
-Cohesion: 0.06
-Nodes (33): approveFinancialEntry(), decide(), rejectFinancialEntry(), activitySchema, addProjectMemberSchema, createChallengeSchema, createFinancialSchema, createNotificationSchema (+25 more)
+Cohesion: 0.07
+Nodes (32): approveFinancialEntry(), decide(), rejectFinancialEntry(), activitySchema, createChallengeSchema, createFinancialSchema, createNotificationSchema, createProfileSchema (+24 more)
 
 ### Community 18 - "Core Database Schema"
 Cohesion: 0.13
@@ -246,16 +247,16 @@ Cohesion: 0.11
 Nodes (19): AlertDialogAction(), AlertDialogCancel(), AlertDialogContent(), AlertDialogDescription(), AlertDialogFooter(), AlertDialogHeader(), AlertDialogOverlay(), AlertDialogPortal() (+11 more)
 
 ### Community 20 - "Invitation Acceptance Workflow"
-Cohesion: 0.19
-Nodes (38): createActivity(), updateActivity(), addProjectMember(), getCurrentUser(), removeProjectMember(), updateProjectMember(), createChallenge(), deleteChallenge() (+30 more)
+Cohesion: 0.22
+Nodes (29): createActivity(), deleteActivity(), getActivity(), updateActivity(), addProjectMember(), updateProjectMember(), createChallenge(), deleteChallenge() (+21 more)
 
 ### Community 21 - "frontend/package.json"
 Cohesion: 0.08
 Nodes (23): motion@12.23.24, @radix-ui/react-accordion@1.2.3, @radix-ui/react-hover-card@1.1.6, @radix-ui/react-progress@1.1.2, @radix-ui/react-separator@1.1.2, @radix-ui/react-switch@1.1.3, react-slick@0.31.0, @supabase/supabase-js@^2.50.0 (+15 more)
 
 ### Community 22 - "Project Data Entry"
-Cohesion: 0.18
-Nodes (22): blank, DataEntry(), Tab, today, BudgetSummary, colors, Reports(), Context (+14 more)
+Cohesion: 0.20
+Nodes (20): blank, DataEntry(), Tab, today, Reports(), Context, DatasetState, FinancialReport (+12 more)
 
 ### Community 23 - "Backend Package Configuration"
 Cohesion: 0.14
@@ -266,8 +267,8 @@ Cohesion: 0.25
 Nodes (15): listActivities(), listProjectMembers(), listChallenges(), listFinancialEntries(), createFinancialReport(), listFinancialReports(), normalizeReport(), listProfiles() (+7 more)
 
 ### Community 25 - "Project Summary and Presentation"
-Cohesion: 0.29
-Nodes (15): buildExecutiveSummary(), countByStatus(), financialReportMetrics(), firstText(), getProject(), getProjectPresentation(), getProjectSummary(), isCompletedStatus() (+7 more)
+Cohesion: 0.35
+Nodes (13): buildExecutiveSummary(), countByStatus(), financialReportMetrics(), firstText(), getProjectPresentation(), getProjectSummary(), isCompletedStatus(), isInProgressStatus() (+5 more)
 
 ### Community 26 - "Backend Integration Tests"
 Cohesion: 0.09
@@ -305,9 +306,9 @@ Nodes (12): Alert(), AlertDescription(), AlertTitle(), alertVariants, Badge(), b
 Cohesion: 0.11
 Nodes (13): xlsx@https://cdn.sheetjs.com/xlsx-0.20.3/x..., Field(), ImportSpreadsheet(), findReportDuplicate(), loadSelectedProjectData(), previewSheet(), resetImport(), uploadFile() (+5 more)
 
-### Community 35 - "Notification Controller"
-Cohesion: 0.30
-Nodes (13): assertProjectAccess(), completedActivityStatuses, createNotification(), formatDueDate(), generateOverdueActivityNotifications(), getUnreadNotificationCount(), hasCronSecret(), listNotifications() (+5 more)
+### Community 35 - "notifications.controller.ts"
+Cohesion: 0.13
+Nodes (22): app, env, result, schema, assertProjectAccess(), completedActivityStatuses, createNotification(), formatDueDate() (+14 more)
 
 ### Community 36 - "Backend TypeScript Configuration"
 Cohesion: 0.13
@@ -318,8 +319,8 @@ Cohesion: 0.19
 Nodes (14): Button(), Carousel(), CarouselApi, CarouselContent(), CarouselContext, CarouselContextProps, CarouselItem(), CarouselNext() (+6 more)
 
 ### Community 38 - "Invitation Interface and API"
-Cohesion: 0.21
-Nodes (10): AcceptedInvitationProject, AcceptInvitationResponse, InvitationDetails, InvitationPage(), acceptInvitation(), messageForError(), roleLabel, apiUrl (+2 more)
+Cohesion: 0.28
+Nodes (7): AcceptedInvitationProject, AcceptInvitationResponse, InvitationDetails, InvitationPage(), acceptInvitation(), messageForError(), roleLabel
 
 ### Community 39 - "README.md"
 Cohesion: 0.04
@@ -350,8 +351,8 @@ Cohesion: 0.22
 Nodes (7): SelectContent(), SelectItem(), SelectLabel(), SelectScrollDownButton(), SelectScrollUpButton(), SelectSeparator(), SelectTrigger()
 
 ### Community 46 - "NotificationsBell.tsx"
-Cohesion: 0.16
-Nodes (14): BackendNotification, completedStatuses, formatDate(), isOverdue(), logNotificationRequestError(), normalizeStatus(), NotificationItem, NotificationsBell() (+6 more)
+Cohesion: 0.15
+Nodes (15): BackendNotification, completedStatuses, formatDate(), isOverdue(), logNotificationRequestError(), normalizeStatus(), NotificationItem, NotificationsBell() (+7 more)
 
 ### Community 47 - "report.service.ts"
 Cohesion: 0.28
@@ -361,21 +362,21 @@ Nodes (8): exceljs@^4.4.0, pdfkit@^0.17.1, buildExcel(), buildPdf(), display(), 
 Cohesion: 0.24
 Nodes (9): NavigationMenu(), NavigationMenuContent(), NavigationMenuIndicator(), NavigationMenuItem(), NavigationMenuLink(), NavigationMenuList(), NavigationMenuTrigger(), navigationMenuTriggerStyle (+1 more)
 
-### Community 49 - "dropdown-menu.tsx"
-Cohesion: 0.12
-Nodes (9): DropdownMenuCheckboxItem(), DropdownMenuContent(), DropdownMenuItem(), DropdownMenuLabel(), DropdownMenuRadioItem(), DropdownMenuSeparator(), DropdownMenuShortcut(), DropdownMenuSubContent() (+1 more)
+### Community 49 - "api.ts"
+Cohesion: 0.21
+Nodes (9): LoginProps, Mode, apiUrl, ApiRequestError, parseApiResponse(), anonKey, isSupabaseConfigured, supabase (+1 more)
 
-### Community 50 - "reports.controller.ts"
-Cohesion: 0.19
-Nodes (10): app, env, result, schema, supabase, auth(), errorHandler(), notFound() (+2 more)
+### Community 50 - "auth.controller.ts"
+Cohesion: 0.23
+Nodes (11): supabase, getCurrentUser(), removeProjectMember(), deleteProject(), getProject(), addProjectMemberSchema, updateProjectMemberSchema, assertDistrict() (+3 more)
 
 ### Community 51 - "Progress Tracker"
 Cohesion: 0.12
 Nodes (17): Backend, Database And Supabase, Local demo mode, Deployment, Frontend, Installation, Maintenance Scripts, Notes (+9 more)
 
 ### Community 52 - "Project Switcher Memberships"
-Cohesion: 0.26
-Nodes (8): Project, ProjectMembership, ProjectSwitcher(), ProjectSwitcherProps, isProject(), isRecord(), isRole(), normalizeProjectMemberships()
+Cohesion: 0.39
+Nodes (7): Project, ProjectMembership, ProjectSwitcherProps, isProject(), isRecord(), isRole(), normalizeProjectMemberships()
 
 ### Community 53 - "Dashboard Design Requirements"
 Cohesion: 0.25
@@ -481,6 +482,10 @@ Nodes (3): Checks before release, Entrypoint and packaging, Vercel backend deplo
 Cohesion: 0.67
 Nodes (3): Backend, Frontend, Scripts
 
+### Community 128 - "ProjectPresentation.tsx"
+Cohesion: 0.31
+Nodes (7): Progress(), EmptyLine(), formatDate(), formatMoney(), MetricCard(), PresentationData, ProjectPresentation()
+
 ## Knowledge Gaps
 - **26 isolated node(s):** `./dist/app.js`, `Project Data Storage`, `Reports and Export`, `Role Based Access Control`, `Chart and Table Drill Down` (+21 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 468 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
@@ -489,17 +494,17 @@ Nodes (3): Backend, Frontend, Scripts
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `react` connect `Interactive Input Components` to `ImportSpreadsheet.tsx`, `Shared Display Components`, `Sidebar and Panel Components`, `Application Navigation and Authentication`, `Imported Data Review`, `Dashboard Overview and Challenges`, `Progress Tracking Interface`, `Project Settings and Membership`, `alert-dialog.tsx`, `frontend/package.json`, `Project Data Entry`, `Menubar Components`, `Form Field Components`, `Status and Toggle Components`, `Carousel Components`, `Invitation Interface and API`, `Chart Components`, `Drawer Components`, `Select Components`, `NotificationsBell.tsx`, `Navigation Menu Components`, `dropdown-menu.tsx`, `Project Switcher Memberships`, `context-menu.tsx`, `React Peer Dependencies`, `apiRequest`?**
-  _High betweenness centrality (0.191) - this node is a cross-community bridge._
+- **Why does `react` connect `Interactive Input Components` to `ImportSpreadsheet.tsx`, `Shared Display Components`, `Sidebar and Panel Components`, `Application Navigation and Authentication`, `Imported Data Review`, `ProjectPresentation.tsx`, `Dashboard Overview and Challenges`, `Progress Tracking Interface`, `Project Settings and Membership`, `alert-dialog.tsx`, `frontend/package.json`, `Project Data Entry`, `Menubar Components`, `Form Field Components`, `Status and Toggle Components`, `Carousel Components`, `Invitation Interface and API`, `Chart Components`, `Drawer Components`, `Select Components`, `NotificationsBell.tsx`, `Navigation Menu Components`, `api.ts`, `Project Switcher Memberships`, `context-menu.tsx`, `React Peer Dependencies`, `apiRequest`?**
+  _High betweenness centrality (0.185) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `throwDb()` (e.g. with `getReportImportReview()` and `runOverdueTaskNotifications()`) actually correct?**
   _`throwDb()` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `./dist/app.js`, `Project Data Storage`, `Reports and Export` to the rest of the system?**
   _26 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `ImportSpreadsheet.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.0915915915915916 - nodes in this community are weakly interconnected._
-- **Why does `lucide-react` connect `Dashboard Overview and Challenges` to `ImportSpreadsheet.tsx`, `Shared Display Components`, `Sidebar and Panel Components`, `Application Navigation and Authentication`, `Imported Data Review`, `Interactive Input Components`, `dependencies`, `Progress Tracking Interface`, `Project Settings and Membership`, `alert-dialog.tsx`, `frontend/package.json`, `Project Data Entry`, `Menubar Components`, `Carousel Components`, `Invitation Interface and API`, `Select Components`, `NotificationsBell.tsx`, `Navigation Menu Components`, `dropdown-menu.tsx`, `Project Switcher Memberships`, `context-menu.tsx`, `apiRequest`?**
-  _High betweenness centrality (0.102) - this node is a cross-community bridge._
+- **Why does `lucide-react` connect `Dashboard Overview and Challenges` to `ImportSpreadsheet.tsx`, `Shared Display Components`, `Sidebar and Panel Components`, `Application Navigation and Authentication`, `Imported Data Review`, `ProjectPresentation.tsx`, `Interactive Input Components`, `dependencies`, `Progress Tracking Interface`, `Project Settings and Membership`, `alert-dialog.tsx`, `frontend/package.json`, `Project Data Entry`, `Menubar Components`, `Carousel Components`, `Invitation Interface and API`, `Select Components`, `NotificationsBell.tsx`, `Navigation Menu Components`, `api.ts`, `Project Switcher Memberships`, `context-menu.tsx`, `apiRequest`?**
+  _High betweenness centrality (0.097) - this node is a cross-community bridge._
 - **Should `Shared Display Components` be split into smaller, more focused modules?**
-  _Cohesion score 0.07312925170068027 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06168831168831169 - nodes in this community are weakly interconnected._
 - **Why does `Progress Tracker` connect `Progress Tracker` to `Phase 0 stabilization`, `README.md`, `Future Predictive Intelligence module`, `Protected deployment verification`, `Project Tracker UI Rules`, `Environment Variables`, `Scripts`?**
-  _High betweenness centrality (0.068) - this node is a cross-community bridge._
+  _High betweenness centrality (0.052) - this node is a cross-community bridge._
