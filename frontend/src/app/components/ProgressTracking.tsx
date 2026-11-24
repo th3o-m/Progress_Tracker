@@ -8,7 +8,7 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { LoadingScreen } from "./LoadingScreen";
 
-const colors = ["#1a3a6b", "#0e7490", "#16a34a", "#d97706", "#c0392b"];
+const colors = ["var(--chart-1)", "var(--chart-2)", "#16a34a", "#d97706", "#c0392b"];
 
 interface ProgressTrackingProps {
   onOpenActivity: (activityId: string) => void;
@@ -99,7 +99,7 @@ export function ProgressTracking({ onOpenActivity }: ProgressTrackingProps) {
                     <span>{item.progress_pct}%</span>
                   </div>
                   <div className="h-2 rounded bg-secondary">
-                    <div className="h-full rounded bg-[#1a3a6b]" style={{ width: `${item.progress_pct}%` }} />
+                    <div className="h-full rounded bg-[#304fc5]" style={{ width: `${item.progress_pct}%` }} />
                   </div>
                 </button>
               ))}

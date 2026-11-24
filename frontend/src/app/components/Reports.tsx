@@ -6,7 +6,7 @@ import { useProjectChallenges, useProjectData, useProjectFinancialReports, usePr
 import { EmptyState } from "./EmptyState";
 import { LoadingScreen } from "./LoadingScreen";
 
-const colors = ["#1a3a6b", "#0e7490", "#d97706", "#7c3aed", "#c0392b"];
+const colors = ["var(--chart-1)", "var(--chart-2)", "#d97706", "#7c3aed", "#c0392b"];
 
 interface BudgetSummary {
   totalBudget: number;
@@ -103,7 +103,7 @@ export function Reports() {
       </div>
       <div className="mt-5">
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide">Expenditure Over Time</h3>
-        {reportSeries.length === 0 ? <EmptyState message="Add a financial report to begin tracking expenditure over time." /> : <ResponsiveContainer width="100%" height={260}><AreaChart data={reportSeries}><CartesianGrid strokeDasharray="3 3" stroke="var(--border)" /><XAxis dataKey="reporting_date" tick={{ fontSize: 10 }} /><YAxis /><Tooltip formatter={(value) => `BWP ${Number(value).toLocaleString()}`} labelFormatter={(label) => `Reporting date: ${label}`} /><Area type="monotone" dataKey="cumulative_expenditure" stroke="#1a3a6b" fill="#bfdbfe" strokeWidth={2} /></AreaChart></ResponsiveContainer>}
+        {reportSeries.length === 0 ? <EmptyState message="Add a financial report to begin tracking expenditure over time." /> : <ResponsiveContainer width="100%" height={260}><AreaChart data={reportSeries}><CartesianGrid strokeDasharray="3 3" stroke="var(--border)" /><XAxis dataKey="reporting_date" tick={{ fontSize: 10 }} /><YAxis /><Tooltip formatter={(value) => `BWP ${Number(value).toLocaleString()}`} labelFormatter={(label) => `Reporting date: ${label}`} /><Area type="monotone" dataKey="cumulative_expenditure" stroke="var(--chart-1)" fill="#bfdbfe" strokeWidth={2} /></AreaChart></ResponsiveContainer>}
       </div>
     </section>
     <div className="grid grid-cols-2 gap-4">
@@ -114,7 +114,7 @@ export function Reports() {
       <section className="rounded-md border border-border bg-card p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h3 className="text-sm font-semibold uppercase tracking-wide">Financial Reporting History</h3>
-          {canReport && <button onClick={generate} disabled={generating} className="flex items-center gap-2 rounded-md bg-[#1a3a6b] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60"><Download className="h-4 w-4" />{generating ? "Generating..." : "Generate annual PDF"}</button>}
+          {canReport && <button onClick={generate} disabled={generating} className="flex items-center gap-2 rounded-md bg-[#304fc5] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60"><Download className="h-4 w-4" />{generating ? "Generating..." : "Generate annual PDF"}</button>}
         </div>
         {financialReports.length === 0 ? <EmptyState message="Add a financial report to keep the expenditure trend current." /> : <table className="w-full text-sm"><thead className="bg-secondary"><tr>{["Reporting date", "Cumulative spend", "Notes", "Created"].map((item) => <th key={item} className="px-4 py-2 text-left text-xs uppercase">{item}</th>)}</tr></thead><tbody>{financialReports.map((item) => <tr key={item.id} className="border-t border-border"><td className="px-4 py-2 font-medium">{new Date(item.reporting_date).toLocaleDateString()}</td><td className="px-4 py-2">BWP {Number(item.cumulative_expenditure).toLocaleString()}</td><td className="px-4 py-2 text-xs text-muted-foreground">{item.notes || "No notes"}</td><td className="px-4 py-2 text-xs text-muted-foreground">{new Date(item.created_at).toLocaleString()}</td></tr>)}</tbody></table>}
       </section>
@@ -122,7 +122,7 @@ export function Reports() {
     <section className="rounded-md border border-border bg-card p-5 shadow-sm">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold uppercase tracking-wide">Generated Reports</h3>
-        {canReport && <button onClick={generate} disabled={generating} className="flex items-center gap-2 rounded-md bg-[#1a3a6b] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60"><Download className="h-4 w-4" />{generating ? "Generating..." : "Generate annual PDF"}</button>}
+        {canReport && <button onClick={generate} disabled={generating} className="flex items-center gap-2 rounded-md bg-[#304fc5] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60"><Download className="h-4 w-4" />{generating ? "Generating..." : "Generate annual PDF"}</button>}
       </div>
       {reports.length === 0 ? <EmptyState message="Generate a report after entering project data." /> : <table className="w-full text-sm"><thead className="bg-secondary"><tr>{["Report", "Type", "Generated"].map((item) => <th key={item} className="px-4 py-2 text-left text-xs uppercase">{item}</th>)}</tr></thead><tbody>{reports.map((item) => <tr key={item.id} className="border-t border-border"><td className="flex items-center gap-2 px-4 py-2"><FileText className="h-4 w-4 text-red-500" />{item.name}</td><td className="px-4 py-2 uppercase">{item.report_type}</td><td className="px-4 py-2 text-xs text-muted-foreground">{new Date(item.created_at).toLocaleString()}</td></tr>)}</tbody></table>}
     </section>

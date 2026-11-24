@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import {
   LayoutDashboard, ClipboardList, TrendingUp, PenLine,
-  BarChart3, Settings, Menu, X, ChevronRight, LogOut, FileSpreadsheet, ClipboardCheck, MonitorPlay,
+  ChartNoAxesColumnIncreasing, BarChart3, Settings, Menu, X, ChevronRight, LogOut, FileSpreadsheet, ClipboardCheck, MonitorPlay,
 } from "lucide-react";
 import { Overview } from "./components/Overview";
 import { Login } from "./components/Login";
@@ -94,7 +94,7 @@ const pageTitle: Record<Page, string> = {
 const demoMembership: ProjectMembership = {
   role: "admin",
   district: "Botswana",
-  projects: { id: "demo-project", name: "Projectt Tracker Demo", description: "Demo project", district: "Botswana", sector: "Environment", status: "active" },
+  projects: { id: "demo-project", name: "Project Tracker Demo", description: "Demo project", district: "Botswana", sector: "Environment", status: "active" },
 };
 
 export default function App() {
@@ -268,7 +268,7 @@ export default function App() {
         className="flex flex-col transition-all duration-200"
         style={{
           width: sidebarOpen ? 280 : 64,
-          background: "var(--sidebar)",
+          background: "linear-gradient(165deg, var(--sidebar), #193182)",
           borderRight: "1px solid var(--sidebar-border)",
           flexShrink: 0,
         }}
@@ -277,11 +277,11 @@ export default function App() {
         <div className="px-3 py-3 border-b" style={{ borderColor: "var(--sidebar-border)" }}>
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: "var(--sidebar-primary)" }}>
-              <span style={{ color: "#fff", fontWeight: 800, fontSize: "0.85rem" }}>PT</span>
+              <ChartNoAxesColumnIncreasing className="h-5 w-5 text-[#101e60]" aria-hidden="true" />
             </div>
             {sidebarOpen && (
               <div className="min-w-0 flex-1 overflow-hidden">
-                <p style={{ color: "var(--sidebar-foreground)", fontWeight: 700, fontSize: "0.8rem", lineHeight: 1.2 }}>Projectt Tracker</p>
+                <p style={{ color: "var(--sidebar-foreground)", fontWeight: 700, fontSize: "0.8rem", lineHeight: 1.2 }}>Project Tracker</p>
                 <p className="truncate" style={{ color: "var(--sidebar-foreground)", fontSize: "0.65rem", opacity: 0.6, lineHeight: 1.2 }}>{selectedMembership?.projects.name || "Project Dashboard"}</p>
               </div>
             )}
@@ -333,7 +333,7 @@ export default function App() {
         {/* Footer */}
         <div className="px-4 py-3 border-t" style={{ borderColor: "var(--sidebar-border)" }}>
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-full bg-[#0e7490] flex items-center justify-center flex-shrink-0">
+            <div className="w-7 h-7 rounded-full bg-[#304fc5] flex items-center justify-center flex-shrink-0">
               <span style={{ color: "#fff", fontSize: "0.65rem", fontWeight: 700 }}>PO</span>
             </div>
             {sidebarOpen && (

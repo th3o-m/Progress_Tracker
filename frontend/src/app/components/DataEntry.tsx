@@ -95,11 +95,11 @@ export function DataEntry({ memberships = [] }: { memberships?: ProjectMembershi
   );
 
   return <div className="space-y-5">
-    <div className="rounded-md bg-[#1a3a6b] p-5 text-white"><p className="text-sm text-white/80">Entries are saved to the selected project and immediately update its metrics.</p></div>
+    <div className="rounded-md bg-[#304fc5] p-5 text-white"><p className="text-sm text-white/80">Entries are saved to the selected project and immediately update its metrics.</p></div>
     {message && <div className="flex gap-3 rounded-md border border-green-200 bg-green-50 p-4 text-green-800"><CheckCircle2 className="h-5 w-5" />{message}</div>}
     {(error || activitiesError || membersError || financialError) && <div className="flex gap-3 rounded-md border border-red-200 bg-red-50 p-4 text-red-800"><AlertCircle className="h-5 w-5" />{error || activitiesError || membersError || financialError}</div>}
     <div className="overflow-hidden rounded-md border border-border bg-card shadow-sm">
-      <div className="flex flex-wrap border-b border-border">{tabs.map((item) => <button key={item.id} type="button" onClick={() => { setTab(item.id); setError(null); setMessage(null); }} className={`px-5 py-3 text-sm font-semibold ${tab === item.id ? "bg-[#1a3a6b] text-white" : "text-muted-foreground hover:bg-secondary"}`}>{item.label}</button>)}</div>
+      <div className="flex flex-wrap border-b border-border">{tabs.map((item) => <button key={item.id} type="button" onClick={() => { setTab(item.id); setError(null); setMessage(null); }} className={`px-5 py-3 text-sm font-semibold ${tab === item.id ? "bg-[#304fc5] text-white" : "text-muted-foreground hover:bg-secondary"}`}>{item.label}</button>)}</div>
       {tab === "import" ? (
         <div className="p-6"><ImportSpreadsheet memberships={memberships} /></div>
       ) : (activitiesLoading && requiresActivities || (tab === "activity" && canCreateActivity && membersLoading)) ? (
@@ -129,7 +129,7 @@ export function DataEntry({ memberships = [] }: { memberships?: ProjectMembershi
           <label className="block text-sm">Notes / Description<textarea rows={3} value={form.financialNotes} onChange={(e) => set("financialNotes", e.target.value)} className={input} /></label>
           {financialReports.length > 0 && <div><h3 className="mb-2 text-sm font-semibold">Financial history</h3><div className="overflow-x-auto rounded-md border border-border"><table className="w-full text-sm"><thead className="bg-secondary"><tr>{["Reporting date", "Period spend", "Total spent to date"].map((heading) => <th key={heading} className="px-3 py-2 text-left text-xs uppercase">{heading}</th>)}</tr></thead><tbody>{financialReports.map((report: FinancialReport) => <tr key={report.id} className="border-t border-border"><td className="px-3 py-2">{report.reporting_date}</td><td className="px-3 py-2">BWP {Number(report.amount_spent).toFixed(2)}</td><td className="px-3 py-2">BWP {Number(report.cumulative_expenditure).toFixed(2)}</td></tr>)}</tbody></table></div></div>}
         </div>}
-        <div className="flex justify-end gap-3"><button type="button" onClick={() => setForm(blank)} className="rounded-md border border-border px-4 py-2 text-sm font-semibold">Clear</button><button type="submit" disabled={submitting} className="rounded-md bg-[#1a3a6b] px-6 py-2 text-sm font-semibold text-white disabled:opacity-60">{submitting ? "Saving..." : "Save Entry"}</button></div>
+        <div className="flex justify-end gap-3"><button type="button" onClick={() => setForm(blank)} className="rounded-md border border-border px-4 py-2 text-sm font-semibold">Clear</button><button type="submit" disabled={submitting} className="rounded-md bg-[#304fc5] px-6 py-2 text-sm font-semibold text-white disabled:opacity-60">{submitting ? "Saving..." : "Save Entry"}</button></div>
       </form>
       )}
     </div>

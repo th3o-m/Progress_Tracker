@@ -237,7 +237,7 @@ export function NotificationsBell({ projectId, onNavigate }: NotificationsBellPr
               <p className="text-xs text-muted-foreground">{displayUnreadCount} unread</p>
             </div>
             {notifications.length > 0 && (
-              <button type="button" onClick={() => void markAllRead()} className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-[#1a3a6b] hover:bg-secondary">
+              <button type="button" onClick={() => void markAllRead()} className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-primary hover:bg-secondary">
                 <CheckCheck className="h-3.5 w-3.5" />
                 Mark all read
               </button>
@@ -270,7 +270,7 @@ export function NotificationsBell({ projectId, onNavigate }: NotificationsBellPr
                 </button>
                 {!notification.isRead && (
                   <div className="px-4 pb-3 pl-14">
-                    <button type="button" onClick={() => void markRead(notification)} className="text-xs font-semibold text-[#1a3a6b] hover:underline">
+                    <button type="button" onClick={() => void markRead(notification)} className="text-xs font-semibold text-primary hover:underline">
                       Mark as read
                     </button>
                   </div>

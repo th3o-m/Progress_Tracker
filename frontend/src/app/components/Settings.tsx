@@ -121,7 +121,7 @@ function MemberCard({
     <article className="rounded-lg border border-border bg-card p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1a3a6b]/10 text-xs font-bold text-[#1a3a6b]">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
             {initials(name)}
           </div>
           <div className="min-w-0">
@@ -133,7 +133,7 @@ function MemberCard({
             <p className="truncate text-xs text-muted-foreground">{member.profiles?.email || "Email unavailable"}</p>
           </div>
         </div>
-        <span className="rounded-full bg-[#1a3a6b]/10 px-2.5 py-1 text-[11px] font-semibold text-[#1a3a6b]">{roleLabel[member.role]}</span>
+        <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">{roleLabel[member.role]}</span>
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -173,7 +173,7 @@ function MemberCard({
           <button type="button" onClick={onRemove} disabled={busy} className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">
             <Trash2 className="h-3.5 w-3.5" />Remove
           </button>
-          <button type="button" onClick={onSave} disabled={busy || !changed} className="inline-flex items-center gap-1.5 rounded-md bg-[#1a3a6b] px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+          <button type="button" onClick={onSave} disabled={busy || !changed} className="inline-flex items-center gap-1.5 rounded-md bg-[#304fc5] px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
             {busy ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             Save access
           </button>
@@ -441,7 +441,7 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
       <section className="rounded-lg border border-border bg-card p-5 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="rounded-lg bg-[#1a3a6b]/10 p-2.5"><ShieldCheck className="h-5 w-5 text-[#1a3a6b]" /></div>
+            <div className="rounded-lg bg-primary/10 p-2.5"><ShieldCheck className="h-5 w-5 text-primary" /></div>
             <div>
               <h2 className="font-bold text-foreground">Project access management</h2>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
@@ -452,7 +452,7 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
           {canViewMembers && (
             <div className="flex flex-wrap items-center gap-2">
               {canManage && (
-                <button type="button" onClick={() => setInviteOpen(true)} className="inline-flex items-center gap-2 rounded-md bg-[#1a3a6b] px-3 py-2 text-xs font-semibold text-white">
+                <button type="button" onClick={() => setInviteOpen(true)} className="inline-flex items-center gap-2 rounded-md bg-[#304fc5] px-3 py-2 text-xs font-semibold text-white">
                   <Link2 className="h-3.5 w-3.5" />Invite Member
                 </button>
               )}
@@ -471,7 +471,7 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
           <section className="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-lg">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 id="invite-member-title" className="flex items-center gap-2 font-semibold text-foreground"><Link2 className="h-4 w-4 text-[#1a3a6b]" />Invite Member</h3>
+                <h3 id="invite-member-title" className="flex items-center gap-2 font-semibold text-foreground"><Link2 className="h-4 w-4 text-primary" />Invite Member</h3>
                 <p className="mt-1 text-xs text-muted-foreground">Generate a project-specific link for a new member.</p>
               </div>
               <button type="button" onClick={() => setInviteOpen(false)} aria-label="Close invite modal" className="rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground">
@@ -498,7 +498,7 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
               </label>
             </div>
 
-            <button type="button" onClick={generateInvitation} disabled={inviteBusy} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#1a3a6b] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60">
+            <button type="button" onClick={generateInvitation} disabled={inviteBusy} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#304fc5] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60">
               {inviteBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
               {invitation ? "Generate new invite" : "Generate Invite"}
             </button>
@@ -528,8 +528,8 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {roles.map((item) => (
-          <button key={item} type="button" onClick={() => canViewMembers && setRoleFilter(roleFilter === item ? "all" : item)} className={`rounded-lg border bg-card p-4 text-left transition-colors ${roleFilter === item ? "border-[#1a3a6b] ring-1 ring-[#1a3a6b]" : "border-border hover:border-[#1a3a6b]/40"}`}>
-            <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-bold text-[#1a3a6b]">{roleLabel[item]}</h3>{canViewMembers && <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-bold text-foreground">{roleCounts[item]}</span>}</div>
+          <button key={item} type="button" onClick={() => canViewMembers && setRoleFilter(roleFilter === item ? "all" : item)} className={`rounded-lg border bg-card p-4 text-left transition-colors ${roleFilter === item ? "border-primary ring-1 ring-ring" : "border-border hover:border-primary/40"}`}>
+            <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-bold text-primary">{roleLabel[item]}</h3>{canViewMembers && <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-bold text-foreground">{roleCounts[item]}</span>}</div>
             <p className="mt-2 text-xs leading-5 text-muted-foreground">{permissions[item].join(" · ")}</p>
           </button>
         ))}
@@ -539,7 +539,7 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
         <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h3 className="flex items-center gap-2 font-semibold text-foreground"><MailWarning className="h-4 w-4 text-[#1a3a6b]" />Overdue reminders</h3>
+              <h3 className="flex items-center gap-2 font-semibold text-foreground"><MailWarning className="h-4 w-4 text-primary" />Overdue reminders</h3>
               <p className="mt-1 text-xs text-muted-foreground">Run the daily overdue task email check now.</p>
               {reminderStatus !== "idle" && (
                 <p className={`mt-2 text-xs font-semibold ${reminderStatus === "failure" ? "text-red-700" : reminderStatus === "success" ? "text-green-700" : "text-muted-foreground"}`}>
@@ -547,7 +547,7 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
                 </p>
               )}
             </div>
-            <button type="button" onClick={sendOverdueReminders} disabled={remindersBusy} className="inline-flex items-center gap-2 rounded-md bg-[#1a3a6b] px-4 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60">
+            <button type="button" onClick={sendOverdueReminders} disabled={remindersBusy} className="inline-flex items-center gap-2 rounded-md bg-[#304fc5] px-4 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60">
               {remindersBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <MailWarning className="h-4 w-4" />}
               {remindersBusy ? "Sending..." : "Send Reminder"}
             </button>
@@ -568,7 +568,7 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
               <label className="text-xs font-medium text-muted-foreground">Frequency<select value={reminderSettings.frequency} disabled={reminderSettingsLoading || reminderSettingsSaving} onChange={(event) => setReminderSettings((current) => ({ ...current, frequency: event.target.value as ReminderFrequency }))} className="mt-1.5 block min-w-48 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground">
                 <option value="manual">Manual only</option><option value="daily">Daily</option><option value="every_3_days">Every 3 days</option><option value="weekly">Weekly</option><option value="biweekly">Every 2 weeks</option><option value="monthly">Monthly</option>
               </select></label>
-              <button type="button" onClick={saveReminderSettings} disabled={reminderSettingsLoading || reminderSettingsSaving} className="inline-flex items-center gap-2 rounded-md border border-[#1a3a6b] px-4 py-2 text-sm font-semibold text-[#1a3a6b] disabled:cursor-wait disabled:opacity-60">
+              <button type="button" onClick={saveReminderSettings} disabled={reminderSettingsLoading || reminderSettingsSaving} className="inline-flex items-center gap-2 rounded-md border border-primary px-4 py-2 text-sm font-semibold text-primary disabled:cursor-wait disabled:opacity-60">
                 {reminderSettingsSaving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{reminderSettingsSaving ? "Saving..." : "Save schedule"}
               </button>
             </div>
@@ -614,13 +614,13 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
 
       {canManage && (
         <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
-          <h3 className="flex items-center gap-2 font-semibold text-foreground"><UserPlus className="h-4 w-4 text-[#1a3a6b]" />Add an existing employee</h3>
+          <h3 className="flex items-center gap-2 font-semibold text-foreground"><UserPlus className="h-4 w-4 text-primary" />Add an existing employee</h3>
           <p className="mt-1 text-xs text-muted-foreground">The employee must already have an active Projectt Tracker account.</p>
           <form onSubmit={addMember} className="mt-4 grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_auto]">
             <label className="text-xs font-medium text-muted-foreground">Employee email<input type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="employee@example.org" className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground" /></label>
             <label className="text-xs font-medium text-muted-foreground">Project role<select value={newRole} onChange={(event) => setNewRole(event.target.value as ProjectRole)} className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground">{roles.map((item) => <option key={item} value={item}>{roleLabel[item]}</option>)}</select></label>
             <label className="text-xs font-medium text-muted-foreground">District scope<input value={district} onChange={(event) => setDistrict(event.target.value)} placeholder="All districts" maxLength={100} className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground" /></label>
-            <button disabled={busy === "add" || !email.trim()} className="inline-flex h-[38px] items-center justify-center gap-2 rounded-md bg-[#1a3a6b] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+            <button disabled={busy === "add" || !email.trim()} className="inline-flex h-[38px] items-center justify-center gap-2 rounded-md bg-[#304fc5] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
               {busy === "add" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}{busy === "add" ? "Adding..." : "Grant access"}
             </button>
           </form>
@@ -630,14 +630,14 @@ export function Settings({ currentUserId }: { currentUserId?: string | null }) {
       {canViewMembers && (
         <section>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div><h3 className="flex items-center gap-2 font-semibold text-foreground"><Users className="h-4 w-4 text-[#1a3a6b]" />Project members <span className="text-sm font-normal text-muted-foreground">({filteredMembers.length})</span></h3></div>
+            <div><h3 className="flex items-center gap-2 font-semibold text-foreground"><Users className="h-4 w-4 text-primary" />Project members <span className="text-sm font-normal text-muted-foreground">({filteredMembers.length})</span></h3></div>
             <div className="relative w-full sm:w-72"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, email, district..." className="w-full rounded-md border border-border bg-card py-2 pl-9 pr-3 text-sm text-foreground" /></div>
           </div>
 
           {loading && members.length === 0 ? (
             <LoadingScreen embedded message="Loading project members…" />
           ) : filteredMembers.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center"><Users className="mx-auto h-7 w-7 text-muted-foreground" /><p className="mt-3 text-sm font-medium text-foreground">{members.length === 0 ? "No project members found" : "No members match your filters"}</p><p className="mt-1 text-xs text-muted-foreground">{members.length === 0 ? "Grant access to an existing employee to build this project team." : "Try a different search or role filter."}</p>{members.length > 0 && <button type="button" onClick={() => { setSearch(""); setRoleFilter("all"); }} className="mt-3 text-xs font-semibold text-[#1a3a6b]">Clear filters</button>}</div>
+            <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center"><Users className="mx-auto h-7 w-7 text-muted-foreground" /><p className="mt-3 text-sm font-medium text-foreground">{members.length === 0 ? "No project members found" : "No members match your filters"}</p><p className="mt-1 text-xs text-muted-foreground">{members.length === 0 ? "Grant access to an existing employee to build this project team." : "Try a different search or role filter."}</p>{members.length > 0 && <button type="button" onClick={() => { setSearch(""); setRoleFilter("all"); }} className="mt-3 text-xs font-semibold text-primary">Clear filters</button>}</div>
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">
               {filteredMembers.map((member) => {

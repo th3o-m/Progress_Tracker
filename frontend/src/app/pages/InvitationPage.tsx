@@ -144,7 +144,7 @@ export function InvitationPage({ token, onAccepted }: { token: string; onAccepte
                 type="button"
                 onClick={acceptInvitation}
                 disabled={joining}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#1a3a6b] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#304fc5] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"
               >
                 {joining ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
                 {joining ? "Joining..." : "Join Project"}

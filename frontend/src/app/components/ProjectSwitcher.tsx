@@ -139,23 +139,23 @@ export function ProjectSwitcher({ memberships, selectedProjectId, isOrgAdmin, lo
             </div>
             <form onSubmit={createProject} className="space-y-4">
               <label className="block text-sm">Project name
-                <input required value={name} onChange={(event) => setName(event.target.value)} className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-[#1a3a6b]" />
+                <input required value={name} onChange={(event) => setName(event.target.value)} className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-ring" />
               </label>
               <label className="block text-sm">Description <span className="text-muted-foreground">(optional)</span>
-                <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-[#1a3a6b]" />
+                <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-ring" />
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block text-sm">Sector
-                  <input value={sector} onChange={(event) => setSector(event.target.value)} placeholder="Environment" className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-[#1a3a6b]" />
+                  <input value={sector} onChange={(event) => setSector(event.target.value)} placeholder="Environment" className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-ring" />
                 </label>
                 <label className="block text-sm">District
-                  <input value={district} onChange={(event) => setDistrict(event.target.value)} placeholder="Chobe" className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-[#1a3a6b]" />
+                  <input value={district} onChange={(event) => setDistrict(event.target.value)} placeholder="Chobe" className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-ring" />
                 </label>
               </div>
               {error && <p role="alert" className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
               <div className="flex justify-end gap-2">
                 <button type="button" onClick={() => setShowCreate(false)} className="rounded-md border border-border px-4 py-2 text-sm">Cancel</button>
-                <button type="submit" disabled={submitting} className="rounded-md bg-[#1a3a6b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{submitting ? "Creating..." : "Create project"}</button>
+                <button type="submit" disabled={submitting} className="rounded-md bg-[#304fc5] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{submitting ? "Creating..." : "Create project"}</button>
               </div>
             </form>
           </section>

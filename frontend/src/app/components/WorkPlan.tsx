@@ -44,7 +44,7 @@ export function WorkPlan({ onOpenActivity }: WorkPlanProps) {
                 key={item}
                 type="button"
                 onClick={() => setCategory(item)}
-                className={`rounded px-3 py-1 text-xs ${category === item ? "bg-[#1a3a6b] text-white" : "bg-secondary text-muted-foreground"}`}
+                className={`rounded px-3 py-1 text-xs ${category === item ? "bg-[#304fc5] text-white" : "bg-secondary text-muted-foreground"}`}
               >
                 {item}
               </button>
@@ -64,7 +64,7 @@ export function WorkPlan({ onOpenActivity }: WorkPlanProps) {
                 <span>{item.progress_pct}%</span>
               </div>
               <div className="h-2 overflow-hidden rounded bg-secondary">
-                <div className="h-full rounded bg-[#0e7490]" style={{ width: `${item.progress_pct}%` }} />
+                <div className="h-full rounded bg-[#304fc5]" style={{ width: `${item.progress_pct}%` }} />
               </div>
             </button>
           ))}

@@ -11,7 +11,7 @@ type DuplicateMode = "skip" | "update" | "new";
 type ImportDuplicate = { type: "activity" | "financial" | "report"; label: string; id?: string };
 type ReportImportRecord = { id: string; review_status?: string };
 
-const inputClass = "w-full min-w-[120px] rounded border border-border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[#1a3a6b]";
+const inputClass = "w-full min-w-[120px] rounded border border-border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring";
 const statuses = ["", "Not Started", "In Progress", "Completed", "On Hold"] as const;
 
 function nullable<T>(value: T | ""): T | null {
@@ -486,7 +486,7 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
       <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="rounded-lg bg-[#1a3a6b]/10 p-2.5"><FileSpreadsheet className="h-5 w-5 text-[#1a3a6b]" /></div>
+            <div className="rounded-lg bg-primary/10 p-2.5"><FileSpreadsheet className="h-5 w-5 text-primary" /></div>
             <div>
               <h2 className="font-bold text-foreground">Import spreadsheet</h2>
               <p className="mt-1 text-sm text-muted-foreground">Upload an .xlsx workbook, edit the extracted data, then import the usable rows.</p>
@@ -507,14 +507,14 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
           </label>
 
           <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-border bg-secondary/40 px-4 py-8 text-center hover:bg-secondary">
-            <Upload className="h-7 w-7 text-[#1a3a6b]" />
+            <Upload className="h-7 w-7 text-primary" />
             <span className="mt-3 text-sm font-semibold text-foreground">Upload .xlsx workbook</span>
             <span className="mt-1 text-xs text-muted-foreground">All sheet names will be available after upload.</span>
             <input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={uploadFile} className="sr-only" />
           </label>
 
           {loading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="h-4 w-4 animate-spin" />Processing workbook...</div>}
-          {uploadProgress > 0 && <div><div className="h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-[#1a3a6b]" style={{ width: `${uploadProgress}%` }} /></div><p className="mt-1 text-xs text-muted-foreground">{uploadProgress}% uploaded</p></div>}
+          {uploadProgress > 0 && <div><div className="h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-[#304fc5]" style={{ width: `${uploadProgress}%` }} /></div><p className="mt-1 text-xs text-muted-foreground">{uploadProgress}% uploaded</p></div>}
 
           {workbookState && (
             <div className="space-y-3 border-t border-border pt-4">
@@ -524,7 +524,7 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
                   {workbookState.sheets.map((sheet) => <option key={sheet} value={sheet}>{sheet}</option>)}
                 </select>
               </label>
-              <button type="button" onClick={() => void previewSheet()} disabled={loading || !selectedSheet} className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#1a3a6b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+              <button type="button" onClick={() => void previewSheet()} disabled={loading || !selectedSheet} className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#304fc5] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
                 {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}Preview selected sheet
               </button>
             </div>
@@ -625,7 +625,7 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
 
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={() => setPreview(null)} className="rounded-md border border-border px-4 py-2 text-sm font-semibold">Choose another sheet</button>
-                <button type="button" onClick={confirmImport} disabled={loading || blockers.length > 0} className="rounded-md bg-[#1a3a6b] px-5 py-2 text-sm font-semibold text-white disabled:opacity-60">{loading ? "Saving..." : "Confirm Import"}</button>
+                <button type="button" onClick={confirmImport} disabled={loading || blockers.length > 0} className="rounded-md bg-[#304fc5] px-5 py-2 text-sm font-semibold text-white disabled:opacity-60">{loading ? "Saving..." : "Confirm Import"}</button>
               </div>
             </>
           )}
