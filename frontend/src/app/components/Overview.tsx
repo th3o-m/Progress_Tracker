@@ -53,10 +53,11 @@ const emptySummary: ProjectSummary = {
 interface OverviewProps {
   projectId: string;
   onViewChallenges?: () => void;
+  showOperationalInsights?: boolean;
   onOpenActivity?: (activityId: string) => void;
 }
 
-export function Overview({ projectId, onViewChallenges, onOpenActivity }: OverviewProps) {
+export function Overview({ projectId, onViewChallenges, onOpenActivity, showOperationalInsights = true }: OverviewProps) {
   const [summary, setSummary] = useState<ProjectSummary>(emptySummary);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -97,7 +98,7 @@ export function Overview({ projectId, onViewChallenges, onOpenActivity }: Overvi
     { label: "Completed", value: completed, detail: `${completionRate}% of all activities`, icon: CheckCircle2, color: "text-chart-3", bg: "bg-chart-3/10" },
     { label: "In progress", value: inProgress, detail: `${summary.notStartedActivities} not started`, icon: Clock, color: "text-accent", bg: "bg-accent/10" },
     { label: "Open challenges", value: unresolved, detail: unresolved ? "Requires attention" : "No unresolved challenges", icon: AlertTriangle, color: "text-destructive", bg: "bg-destructive/10", onClick: onViewChallenges },
-  ];
+  ].filter((card) => showOperationalInsights || card.label !== "Open challenges");
 
   function openActivity(activityId: string) {
     onOpenActivity?.(activityId);
@@ -135,7 +136,7 @@ export function Overview({ projectId, onViewChallenges, onOpenActivity }: Overvi
         </div>
       </section>
 
-      <section aria-label="Key project metrics" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Key project metrics" className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${showOperationalInsights ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}>
         {cards.map((card) => {
           const content = (
             <>
@@ -178,13 +179,13 @@ export function Overview({ projectId, onViewChallenges, onOpenActivity }: Overvi
           <h3 className="text-lg font-semibold tracking-tight text-foreground">Needs attention</h3>
           <div className="mt-4 divide-y divide-border">
             <div className="flex items-center justify-between gap-3 pb-3 text-sm"><span className="text-muted-foreground">Overdue activities</span><span className="font-semibold tabular-nums text-foreground">{summary.overdueActivities}</span></div>
-            <div className="flex items-center justify-between gap-3 pt-3 text-sm"><span className="text-muted-foreground">Unresolved challenges</span><span className="font-semibold tabular-nums text-foreground">{unresolved}</span></div>
+            {showOperationalInsights && <div className="flex items-center justify-between gap-3 pt-3 text-sm"><span className="text-muted-foreground">Unresolved challenges</span><span className="font-semibold tabular-nums text-foreground">{unresolved}</span></div>}
           </div>
-          {onViewChallenges && <button type="button" onClick={onViewChallenges} className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline">Review challenges <ArrowRight aria-hidden="true" className="h-4 w-4" /></button>}
+          {showOperationalInsights && onViewChallenges && <button type="button" onClick={onViewChallenges} className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline">Review challenges <ArrowRight aria-hidden="true" className="h-4 w-4" /></button>}
         </div>
       </section>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <section aria-labelledby="monthly-progress-heading" className="min-w-0 rounded-xl border border-border bg-card p-5 sm:p-6 lg:col-span-8">
+        {showOperationalInsights && <section aria-labelledby="monthly-progress-heading" className="min-w-0 rounded-xl border border-border bg-card p-5 sm:p-6 lg:col-span-8">
           <div className="mb-6">
             <h3 id="monthly-progress-heading" className="text-lg font-semibold tracking-tight text-foreground">Progress by reporting month</h3>
             <p className="mt-1 text-sm text-muted-foreground">Average reported progress (%) · grouped by calendar month across available history</p>
@@ -212,9 +213,9 @@ export function Overview({ projectId, onViewChallenges, onOpenActivity }: Overvi
               </details>
             </>
           )}
-        </section>
+        </section>}
 
-        <section aria-labelledby="activity-status-heading" className="min-w-0 rounded-xl border border-border bg-card p-5 sm:p-6 lg:col-span-4">
+        <section aria-labelledby="activity-status-heading" className={`min-w-0 rounded-xl border border-border bg-card p-5 sm:p-6 ${showOperationalInsights ? "lg:col-span-4" : "lg:col-span-12"}`}>
           <h3 id="activity-status-heading" className="text-lg font-semibold tracking-tight text-foreground">Activity breakdown</h3>
           <p className="mt-1 text-sm text-muted-foreground">Distribution by current status</p>
           {statusData.length === 0 ? <div className="mt-6"><EmptyState message="No activities to summarize." /></div> : (
