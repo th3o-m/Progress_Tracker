@@ -6,13 +6,13 @@ Keep the existing Project Tracker identity. Improve consistency and usability be
 ## 1. Color and visual consistency
 
 - The single source of truth is `frontend/src/styles/theme.css`. Use semantic theme tokens and Tailwind utilities (`bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-primary`, `text-primary-foreground`, `ring-ring`). **Do not hardcode hex colors in new components.**
-- Preserve the existing light palette: navy `#1a3a6b` (primary/actions), teal `#0e7490` (focus/accent), `#eef2f7` (canvas), white (cards), `#0f1f3d` (foreground). Use semantic success/warning/destructive colors **only** for their meanings.
+- Preserve the current light theme defined in `theme.css`: royal blue `#304fc5` (primary), deep navy `#101e60` (sidebar), blue `#3457a6` (accent), `#f3f6fc` (canvas), white (cards), and `#152e50` (foreground). Use semantic success/warning/destructive colors **only** for their meanings. Theme tokens remain authoritative for dark mode and any future approved palette changes.
 - Support both light and dark modes using corresponding theme tokens; avoid light-only backgrounds or text. Use subtle 1px borders, restrained shadows, small consistent radii, and generous whitespace. **No decorative gradients, loud colors, or unnecessary glass effects.**
 - Use one clear visual hierarchy: a page title, concise section headings, cards for grouped information, and at most one visually dominant primary action per area.
 
 ## 2. Typography
 
-- Use **one consistent modern sans-serif family** throughout (the existing system sans stack unless a shared font is explicitly introduced). No mixed display/body fonts or decorative fonts.
+- Preserve the established type system: `--font-interface` (Inter with system sans-serif fallbacks) for controls, body text, charts and metrics; `--font-editorial` (Georgia) for the existing italic `.workspace-title` treatment. Do not add additional font families or replace these without approval.
 - Use a predictable type scale: page title **28–30px**, section title **22–24px**, card title **18px**, body **15–16px**, secondary text **13–14px**. Avoid tiny text for essential information.
 - Use weight **400** for body, **500–600** for labels and section headings, and **600–700** for page titles. Body line-height **1.45–1.6**; headings tighter. Align numeric columns and use tabular numerals for KPI values.
 
@@ -59,3 +59,13 @@ Before merging a UI change, verify:
 5. Chart/table labels and data correctness where applicable.
 
 **Priority:** usability → accessibility → consistency → visual polish. A premium SaaS UI is calm, predictable, legible and efficient—not visually busy.
+
+## 8. Dashboard visual direction — Recent-inspired
+
+Reference entries from Recent Design (inspiration, not copied assets or code):
+
+- [Spacing Tips](https://recent.design/i/qbsvs1j-spacing-visualization-dashboard): disciplined spacing and consistent grid alignment.
+- [Moody Status Badges](https://recent.design/i/eaj2ae4-moody-status-badges): concise, labeled status chips; use the application's semantic colors rather than importing the reference's palette.
+- [Project Tracker Carousel](https://recent.design/i/ibsfv7y-x-com): a relevant project-tracking reference for future exploration. The full reference page was not retrievable during this update.
+
+Dashboard order: contextual heading, current KPIs, delivery progress and attention, reporting chart and status distribution, recent work. Use a 12-column grid with an 8/4 split on wide viewports; collapse to single-column panels as space decreases. Provide chart data as text/table, real keyboard-operable actions, and distinct loading and error states. Only display operational insights that the selected role receives from the API. Never introduce filters, comparisons, historical trends or predicted values that aren't backed by the data; the current monthly aggregation combines calendar months across available history.
