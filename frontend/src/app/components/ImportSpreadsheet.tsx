@@ -483,17 +483,37 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="rounded-lg bg-primary/10 p-2.5"><FileSpreadsheet className="h-5 w-5 text-primary" /></div>
-            <div>
+      <section aria-label="Spreadsheet import actions" className={`rounded-lg border border-border bg-card p-4 shadow-sm sm:p-5 ${preview ? "sticky top-0 z-20" : ""}`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <div className="hidden shrink-0 rounded-lg bg-primary/10 p-2.5 sm:block"><FileSpreadsheet aria-hidden="true" className="h-5 w-5 text-primary" /></div>
+            <div className="min-w-0">
               <h2 className="font-bold text-foreground">Import spreadsheet</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Upload an .xlsx workbook, edit the extracted data, then import the usable rows.</p>
+              {preview ? (
+                <p className="mt-1 break-words text-xs text-muted-foreground">
+                  {selectedProject?.projects.name ?? "Choose a target project"} · {preview.sourceSheetName} · {preview.milestones.length} activities, {preview.risks.length} risks, {preview.financialRows.length} financial rows
+                </p>
+              ) : <p className="mt-1 text-sm text-muted-foreground">Upload an .xlsx workbook, edit the extracted data, then import the usable rows.</p>}
             </div>
           </div>
-          <button type="button" onClick={resetImport} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-semibold hover:bg-secondary"><X className="h-3.5 w-3.5" />Cancel</button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={resetImport} disabled={loading} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-semibold text-foreground hover:bg-secondary disabled:opacity-60"><X aria-hidden="true" className="h-4 w-4" />Cancel</button>
+            {preview && (
+              <>
+                <button type="button" onClick={() => setPreview(null)} disabled={loading} className="inline-flex min-h-11 items-center rounded-md border border-border px-3 py-2 text-sm font-semibold text-foreground hover:bg-secondary disabled:opacity-60">Choose another sheet</button>
+                <button type="button" onClick={confirmImport} disabled={loading || blockers.length > 0} aria-describedby="import-action-status" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">
+                  {loading ? <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin" /> : <Upload aria-hidden="true" className="h-4 w-4" />}
+                  {loading ? "Processing..." : "Confirm Import"}
+                </button>
+              </>
+            )}
+          </div>
         </div>
+        {preview && (
+          <p id="import-action-status" role="status" className={`mt-2 text-xs ${blockers.length > 0 || error ? "text-destructive" : "text-muted-foreground"}`}>
+            {loading ? "Processing spreadsheet data…" : error ? "Import or preview failed. See the error details below." : message ? "Import completed. Review the result message below." : blockers.length > 0 ? `Resolve ${blockers.length} blocking issue${blockers.length === 1 ? "" : "s"} before importing.` : duplicates.length > 0 ? "Review duplicate handling and the extracted data before confirming." : "Review the extracted data before confirming. This will update the selected project."}
+          </p>
+        )}
       </section>
 
       {(message || error) && <div className={`flex items-start gap-3 rounded-md border p-4 text-sm ${message ? "border-green-200 bg-green-50 text-green-800" : "border-red-200 bg-red-50 text-red-800"}`}>{message ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}<span>{message || error}</span></div>}
@@ -623,10 +643,7 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
                 ))}
               </section>
 
-              <div className="flex justify-end gap-3">
-                <button type="button" onClick={() => setPreview(null)} className="rounded-md border border-border px-4 py-2 text-sm font-semibold">Choose another sheet</button>
-                <button type="button" onClick={confirmImport} disabled={loading || blockers.length > 0} className="rounded-md bg-[#304fc5] px-5 py-2 text-sm font-semibold text-white disabled:opacity-60">{loading ? "Saving..." : "Confirm Import"}</button>
-              </div>
+
             </>
           )}
         </div>
