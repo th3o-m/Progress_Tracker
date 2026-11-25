@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { AlertCircle, CheckCircle2, FileSpreadsheet, LoaderCircle, RefreshCw, Upload, X } from "lucide-react";
 import type { WorkBook } from "xlsx";
 import { apiRequest } from "../../lib/api";
+import { buildImportOutcome, type ImportCounts, type ImportOutcome } from "../../lib/importOutcome";
 import { useProjectData, type Activity, type FinancialEntry, type FinancialReport, type ProjectMember } from "../ProjectDataContext";
 import { parseWorkbookSheet, type FinancialPreview, type MilestonePreview, type ParsedSpreadsheetPreview, type ProjectDetailsPreview, type RiskPreview } from "../importSpreadsheetParser";
 import type { ProjectMembership } from "./ProjectSwitcher";
@@ -102,7 +103,7 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
   const [preview, setPreview] = useState<ParsedSpreadsheetPreview | null>(null);
   const [duplicates, setDuplicates] = useState<ImportDuplicate[]>([]);
   const [duplicateMode, setDuplicateMode] = useState<DuplicateMode>("skip");
-  const [message, setMessage] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -141,7 +142,7 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
     setDuplicates([]);
     setDuplicateMode("skip");
     setUploadProgress(0);
-    setMessage(null);
+    setOutcome(null);
     setError(null);
   }
 
@@ -198,7 +199,7 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
     if (!workbookState || !sheetName) return;
     setLoading(true);
     setError(null);
-    setMessage(null);
+    setOutcome(null);
     try {
       const XLSX = await import("xlsx");
       const parsed = parseWorkbookSheet(workbookState.workbook, sheetName, workbookState.fileName, XLSX.utils);
@@ -377,9 +378,9 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
   }
 
   async function saveFinancialRow(row: FinancialPreview, fallbackActivity: Activity, importId: string | null) {
-    if (!row.item) return;
+    if (!row.item) return false;
     const existing = existingFinancialFor(row, projectFinancial);
-    if (existing && duplicateMode === "skip") return;
+    if (existing && duplicateMode === "skip") return false;
     const body = {
       activity_id: fallbackActivity.id,
       expense_category: row.item || "",
@@ -394,12 +395,13 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
     };
     if (existing && duplicateMode === "update") await apiRequest(`/projects/${selectedProjectId}/financial-entries/${existing.id}`, { method: "PATCH", body: JSON.stringify(body) });
     else await apiRequest(`/projects/${selectedProjectId}/financial-entries`, { method: "POST", body: JSON.stringify(body) });
+    return true;
   }
 
-  async function saveFinancialReportSnapshot(nextPreview: ParsedSpreadsheetPreview): Promise<void> {
-    if (nextPreview.financialRows.length === 0) return;
+  async function saveFinancialReportSnapshot(nextPreview: ParsedSpreadsheetPreview): Promise<boolean | null> {
+    if (nextPreview.financialRows.length === 0) return null;
     const reportingDate = chooseDate(nextPreview.projectDetails.actualCompletionDate || "", nextPreview.projectDetails.plannedCompletionDate || "");
-    if (!reportingDate) return;
+    if (!reportingDate) return false;
     const cumulativeExpenditure = nextPreview.financialRows.reduce((total, row) => total + Number(row.expenditureToDate || 0), 0);
     const previousTotal = projectFinancialReports.reduce((latest, report) => Math.max(latest, Number(report.cumulative_expenditure || 0)), 0);
     try {
@@ -413,25 +415,41 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
       });
     } catch (requestError) {
       console.warn("Financial report snapshot could not be saved; continuing with spreadsheet import.", requestError);
+      return false;
     }
+    return true;
   }
 
   async function confirmImport() {
     const blockers = blockingErrors();
-    if (!preview || blockers.length > 0) return;
+    if (!preview || loading || outcome || blockers.length > 0) return;
     const responsibleOfficer = firstOfficerId(projectMembers);
     setLoading(true);
     setError(null);
-    setMessage(null);
+    setOutcome(null);
+    const counts: ImportCounts = { activities: 0, progressUpdates: 0, challenges: 0, financialEntries: 0, projectDetails: 0, reportSnapshots: 0, financialSnapshots: 0 };
+    const issues: string[] = [];
     try {
       const importRecord = await saveReportSnapshot(preview);
       const importId = importRecord?.id ?? null;
+      if (!importId) issues.push("Import history could not be saved.");
+      else if (!(duplicates.some((item) => item.type === "report") && duplicateMode !== "update")) counts.reportSnapshots++;
       const projectUpdated = await updateSelectedProjectDetails(preview);
-      await saveFinancialReportSnapshot(preview);
+      if (projectUpdated) counts.projectDetails++;
+      else issues.push("Project details could not be updated.");
+      const financialSnapshot = await saveFinancialReportSnapshot(preview);
+      if (financialSnapshot === true) counts.financialSnapshots++;
+      if (financialSnapshot === false) issues.push("The financial report snapshot could not be saved.");
       const activityMap = new Map<string, Activity>();
       for (const [index, milestone] of preview.milestones.entries()) {
+        const reused = duplicateMode === "skip" && Boolean(existingActivityFor(milestone, projectActivities));
         const activity = await createOrUpdateActivity(milestone, index, responsibleOfficer, importId);
-        if (activity) activityMap.set(normalizeKey(milestone.name || "Imported milestone"), activity);
+        if (activity) {
+          activityMap.set(normalizeKey(milestone.name || "Imported milestone"), activity);
+          if (!reused) counts.activities++;
+        } else if (!issues.includes("Some activities and progress updates were skipped because no responsible officer was available.")) {
+          issues.push("Some activities and progress updates were skipped because no responsible officer was available.");
+        }
         if (activity) {
           await apiRequest(`/projects/${selectedProjectId}/progress-updates`, {
             method: "POST",
@@ -448,25 +466,42 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
               reporting_period: preview.projectDetails.actualCompletionDate || preview.projectDetails.plannedCompletionDate || null,
             }),
           });
+          counts.progressUpdates++;
         }
       }
       let fallbackActivity = activityMap.values().next().value ?? projectActivities[0] ?? null;
-      if (!fallbackActivity && (preview.risks.length > 0 || preview.financialRows.length > 0)) fallbackActivity = await createPlaceholderActivity(responsibleOfficer, importId);
+      if (!fallbackActivity && (preview.risks.length > 0 || preview.financialRows.length > 0)) {
+        fallbackActivity = await createPlaceholderActivity(responsibleOfficer, importId);
+        if (fallbackActivity) counts.activities++;
+        else issues.push("Challenges and financial entries could not be linked to an activity.");
+      }
       if (fallbackActivity) {
         for (const risk of preview.risks) {
-          if (!risk.majorRisk) continue;
+          if (!risk.majorRisk) {
+            if (!issues.includes("Blank challenge descriptions were skipped.")) issues.push("Blank challenge descriptions were skipped.");
+            continue;
+          }
           await apiRequest(`/projects/${selectedProjectId}/challenges`, {
             method: "POST",
             body: JSON.stringify({ activity_id: fallbackActivity.id, challenge_type: risk.statusColor || "Risk", description: risk.majorRisk, mitigation_plan: risk.mitigation || "", resolved: false, import_id: importId, status_color: risk.statusColor || null, responsible_officer: responsibleOfficer || null }),
           });
+          counts.challenges++;
         }
-        for (const row of preview.financialRows) await saveFinancialRow(row, fallbackActivity, importId);
+        for (const row of preview.financialRows) {
+          if (!row.item) {
+            if (!issues.includes("Blank financial items were skipped.")) issues.push("Blank financial items were skipped.");
+            continue;
+          }
+          if (await saveFinancialRow(row, fallbackActivity, importId)) counts.financialEntries++;
+        }
       }
-      if (selectedProjectId === projectId) await refresh();
-      setMessage(`Imported available data from ${preview.sourceSheetName}. Project tables were refreshed through the same APIs used by the app pages.${projectUpdated ? "" : " Project detail update failed, but row data was kept."}${importId ? " Use Imported Data Review to inspect and correct this import." : " Import history logging failed, but the spreadsheet data was still saved."}`);
+      if (selectedProjectId === projectId) {
+        try { await refresh(); } catch { issues.push("Saved data could not be refreshed. Reload the project."); }
+      }
+      setOutcome(buildImportOutcome(preview.sourceSheetName, counts, issues));
       setDuplicates([]);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Unable to save imported data.");
+      setOutcome(buildImportOutcome(preview.sourceSheetName, counts, issues, requestError instanceof Error ? requestError.message : "Unable to confirm all imported data."));
     } finally {
       setLoading(false);
     }
@@ -501,27 +536,33 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
             {preview && (
               <>
                 <button type="button" onClick={() => setPreview(null)} disabled={loading} className="inline-flex min-h-11 items-center rounded-md border border-border px-3 py-2 text-sm font-semibold text-foreground hover:bg-secondary disabled:opacity-60">Choose another sheet</button>
-                <button type="button" onClick={confirmImport} disabled={loading || blockers.length > 0} aria-describedby="import-action-status" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">
+                <button type="button" onClick={confirmImport} disabled={loading || Boolean(outcome) || blockers.length > 0} aria-describedby="import-action-status" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">
                   {loading ? <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin" /> : <Upload aria-hidden="true" className="h-4 w-4" />}
-                  {loading ? "Processing..." : "Confirm Import"}
+                  {loading ? "Processing..." : outcome ? "Import finished" : "Confirm Import"}
                 </button>
               </>
             )}
           </div>
         </div>
-        {preview && (
-          <p id="import-action-status" role="status" className={`mt-2 text-xs ${blockers.length > 0 || error ? "text-destructive" : "text-muted-foreground"}`}>
-            {loading ? "Processing spreadsheet data…" : error ? "Import or preview failed. See the error details below." : message ? "Import completed. Review the result message below." : blockers.length > 0 ? `Resolve ${blockers.length} blocking issue${blockers.length === 1 ? "" : "s"} before importing.` : duplicates.length > 0 ? "Review duplicate handling and the extracted data before confirming." : "Review the extracted data before confirming. This will update the selected project."}
+        {outcome ? (
+          <div id="import-action-status" role={outcome.kind === "error" ? "alert" : "status"} aria-atomic="true" className={`mt-3 flex items-start gap-3 rounded-lg border p-3 ${outcome.kind === "success" ? "border-chart-3/40 bg-chart-3/10" : outcome.kind === "partial" ? "border-chart-4/40 bg-chart-4/10" : "border-destructive/40 bg-destructive/10"}`}>
+            {outcome.kind === "success" ? <CheckCircle2 aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-chart-3" /> : <AlertCircle aria-hidden="true" className={`mt-0.5 h-5 w-5 shrink-0 ${outcome.kind === "partial" ? "text-chart-4" : "text-destructive"}`} />}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground">{outcome.title}</p>
+              <p className="mt-1 break-words text-xs leading-relaxed text-foreground">{outcome.detail}</p>
+            </div>
+          </div>
+        ) : (
+          <p id="import-action-status" role={error ? "alert" : "status"} aria-atomic="true" className={`mt-2 break-words text-sm ${error || blockers.length > 0 && preview ? "text-destructive" : "text-muted-foreground"}`}>
+            {loading ? "Processing spreadsheet data… Please wait for the import result." : error || (preview ? (blockers.length > 0 ? `Resolve ${blockers.length} blocking issue${blockers.length === 1 ? "" : "s"} before importing.` : duplicates.length > 0 ? "Review duplicate handling and the extracted data before confirming." : "Review the extracted data before confirming. This will update the selected project.") : "")}
           </p>
         )}
       </section>
 
-      {(message || error) && <div className={`flex items-start gap-3 rounded-md border p-4 text-sm ${message ? "border-green-200 bg-green-50 text-green-800" : "border-red-200 bg-red-50 text-red-800"}`}>{message ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}<span>{message || error}</span></div>}
-
       <section className="grid gap-4 lg:grid-cols-[340px_1fr]">
         <div className="space-y-4 rounded-lg border border-border bg-card p-5 shadow-sm">
           <label className="block text-sm font-medium text-foreground">Project
-            <select value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)} className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
+            <select value={selectedProjectId} disabled={loading} onChange={(event) => { setSelectedProjectId(event.target.value); setPreview(null); setOutcome(null); setDuplicates([]); setError(null); }} className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
               {managerProjects.map((item) => <option key={item.projects.id} value={item.projects.id}>{item.projects.name} ({item.role})</option>)}
             </select>
           </label>
@@ -530,7 +571,7 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
             <Upload className="h-7 w-7 text-primary" />
             <span className="mt-3 text-sm font-semibold text-foreground">Upload .xlsx workbook</span>
             <span className="mt-1 text-xs text-muted-foreground">All sheet names will be available after upload.</span>
-            <input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={uploadFile} className="sr-only" />
+            <input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={uploadFile} disabled={loading} className="sr-only" />
           </label>
 
           {loading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="h-4 w-4 animate-spin" />Processing workbook...</div>}
@@ -540,7 +581,7 @@ export function ImportSpreadsheet({ memberships }: { memberships: ProjectMembers
             <div className="space-y-3 border-t border-border pt-4">
               <p className="text-xs font-semibold text-muted-foreground">{workbookState.fileName}</p>
               <label className="block text-sm font-medium text-foreground">Sheet
-                <select value={selectedSheet} onChange={(event) => { setSelectedSheet(event.target.value); void previewSheet(event.target.value); }} className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
+                <select value={selectedSheet} disabled={loading} onChange={(event) => { setSelectedSheet(event.target.value); void previewSheet(event.target.value); }} className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
                   {workbookState.sheets.map((sheet) => <option key={sheet} value={sheet}>{sheet}</option>)}
                 </select>
               </label>
