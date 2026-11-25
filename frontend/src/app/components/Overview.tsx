@@ -82,11 +82,21 @@ export function Overview({ projectId, onViewChallenges, onOpenActivity }: Overvi
   const unresolved = summary.unresolvedChallenges;
   const statusData = summary.activityStatusSummary;
   const monthlyData = summary.monthlyProgressSummary;
+  const progress = Math.min(100, Math.max(0, Number(summary.averageProgress) || 0));
+  const completionRate = summary.totalActivities > 0
+    ? Math.round(completed / summary.totalActivities * 100)
+    : 0;
+  const reportDate = summary.latestReportingDate
+    ? new Date(summary.latestReportingDate)
+    : null;
+  const reportLabel = reportDate && !Number.isNaN(reportDate.getTime())
+    ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(reportDate)
+    : "No reporting date recorded";
   const cards = [
-    { label: "Activities", value: summary.totalActivities, icon: ListTodo, color: "text-primary", bg: "bg-primary/10" },
-    { label: "Completed", value: completed, icon: CheckCircle2, color: "text-chart-3", bg: "bg-chart-3/10" },
-    { label: "In Progress", value: inProgress, icon: Clock, color: "text-accent", bg: "bg-accent/10" },
-    { label: "Open Challenges", value: unresolved, icon: AlertTriangle, color: "text-destructive", bg: "bg-destructive/10", onClick: onViewChallenges },
+    { label: "Total activities", value: summary.totalActivities, detail: "Activities in scope", icon: ListTodo, color: "text-primary", bg: "bg-primary/10" },
+    { label: "Completed", value: completed, detail: `${completionRate}% of all activities`, icon: CheckCircle2, color: "text-chart-3", bg: "bg-chart-3/10" },
+    { label: "In progress", value: inProgress, detail: `${summary.notStartedActivities} not started`, icon: Clock, color: "text-accent", bg: "bg-accent/10" },
+    { label: "Open challenges", value: unresolved, detail: unresolved ? "Requires attention" : "No unresolved challenges", icon: AlertTriangle, color: "text-destructive", bg: "bg-destructive/10", onClick: onViewChallenges },
   ];
 
   function openActivity(activityId: string) {
@@ -112,31 +122,65 @@ export function Overview({ projectId, onViewChallenges, onOpenActivity }: Overvi
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-semibold tracking-tight text-foreground">Performance snapshot</h2><p className="mt-1 text-sm text-muted-foreground">Key metrics and recent activity for your selected project.</p></div><span className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground">Project overview</span></div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="mx-auto w-full max-w-[1440px] space-y-6">
+      <section aria-labelledby="dashboard-heading" className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Project intelligence</p>
+          <h2 id="dashboard-heading" className="text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-3xl">Performance at a glance</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Monitor delivery, track progress and identify work that needs attention.</p>
+        </div>
+        <div className="rounded-lg border border-border bg-card px-4 py-3">
+          <p className="text-xs text-muted-foreground">Latest financial reporting date</p>
+          <p className="mt-1 text-sm font-semibold tabular-nums text-foreground">{reportLabel}</p>
+        </div>
+      </section>
+
+      <section aria-label="Key project metrics" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => {
           const content = (
             <>
-              <div className={`mb-3 inline-flex rounded-md p-2 ${card.bg}`}><card.icon className={`h-5 w-5 ${card.color}`} /></div>
-              <p className="text-3xl font-semibold tracking-tight tabular-nums text-foreground">{card.value}</p>
-              <p className="text-xs text-muted-foreground">{card.label}</p>
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-medium text-muted-foreground">{card.label}</p>
+                <span className={`inline-flex shrink-0 rounded-lg p-2 ${card.bg}`}><card.icon aria-hidden="true" className={`h-4 w-4 ${card.color}`} /></span>
+              </div>
+              <p className="mt-3 text-3xl font-semibold leading-tight tracking-tight tabular-nums text-foreground">{card.value.toLocaleString()}</p>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">{card.detail}</p>
+                {card.onClick && <ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0 text-primary" />}
+              </div>
             </>
           );
+          const classes = "min-w-0 rounded-xl border border-border bg-card p-5 text-left";
           return card.onClick
-            ? <button key={card.label} type="button" onClick={card.onClick} className="rounded-lg border border-border bg-card p-5 text-left shadow-sm transition-colors hover:border-accent/40 hover:bg-secondary/40 focus-visible:ring-2 focus-visible:ring-ring">{content}</button>
-            : <div key={card.label} className="rounded-lg border border-border bg-card p-5 shadow-sm">{content}</div>;
+            ? <button key={card.label} type="button" onClick={card.onClick} className={`${classes} transition-colors hover:border-primary/40 hover:bg-secondary/30 focus-visible:ring-2 focus-visible:ring-ring`}>{content}</button>
+            : <div key={card.label} className={classes}>{content}</div>;
         })}
-      </div>
-      <section className="rounded-md border border-border bg-card p-5 shadow-sm">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wide">Current Challenges</h3>
-            <p className="mt-1 text-xs text-muted-foreground">{unresolved} unresolved challenge{unresolved === 1 ? "" : "s"} need attention.</p>
+      </section>
+
+      <section aria-label="Delivery overview" className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <div className="min-w-0 rounded-xl border border-border bg-card p-5 sm:p-6 lg:col-span-8">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold tracking-tight text-foreground">Overall delivery</h3>
+              <p className="mt-1 text-sm text-muted-foreground">Average recorded activity progress</p>
+            </div>
+            <p className="text-4xl font-semibold leading-none tracking-tight tabular-nums text-primary">{summary.totalActivities ? `${Math.round(progress)}%` : "—"}</p>
           </div>
-          <button type="button" onClick={onViewChallenges} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-secondary">
-            View challenges <ArrowRight className="h-3.5 w-3.5" />
-          </button>
+          <div className="mt-6 h-3 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Average activity progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={summary.totalActivities ? progress : undefined} aria-valuetext={summary.totalActivities ? `${progress}%` : "No activities recorded"}>
+            <div className="h-full rounded-full bg-primary" style={{ width: `${summary.totalActivities ? progress : 0}%` }} />
+          </div>
+          <div className="mt-4 flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
+            <span>{completed} completed of {summary.totalActivities} activities</span>
+            <span>{summary.totalActivities ? "Based on recorded progress" : "Add activities to start tracking"}</span>
+          </div>
+        </div>
+        <div className="min-w-0 rounded-xl border border-border bg-card p-5 sm:p-6 lg:col-span-4">
+          <h3 className="text-lg font-semibold tracking-tight text-foreground">Needs attention</h3>
+          <div className="mt-4 divide-y divide-border">
+            <div className="flex items-center justify-between gap-3 pb-3 text-sm"><span className="text-muted-foreground">Overdue activities</span><span className="font-semibold tabular-nums text-foreground">{summary.overdueActivities}</span></div>
+            <div className="flex items-center justify-between gap-3 pt-3 text-sm"><span className="text-muted-foreground">Unresolved challenges</span><span className="font-semibold tabular-nums text-foreground">{unresolved}</span></div>
+          </div>
+          {onViewChallenges && <button type="button" onClick={onViewChallenges} className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline">Review challenges <ArrowRight aria-hidden="true" className="h-4 w-4" /></button>}
         </div>
       </section>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
