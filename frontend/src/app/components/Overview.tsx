@@ -183,44 +183,96 @@ export function Overview({ projectId, onViewChallenges, onOpenActivity }: Overvi
           {onViewChallenges && <button type="button" onClick={onViewChallenges} className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline">Review challenges <ArrowRight aria-hidden="true" className="h-4 w-4" /></button>}
         </div>
       </section>
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <section className="rounded-md border border-border bg-card p-5 shadow-sm"><h3 className="mb-4 text-sm font-semibold uppercase tracking-wide">Activities by Status</h3>{statusData.length === 0 ? <EmptyState /> : <ResponsiveContainer width="100%" height={230}><BarChart data={statusData}><CartesianGrid strokeDasharray="3 3" stroke="var(--border)" /><XAxis dataKey="status" tick={{ fontSize: 11 }} /><YAxis allowDecimals={false} /><Tooltip /><Bar dataKey="count" fill="var(--chart-1)" radius={[3, 3, 0, 0]} /></BarChart></ResponsiveContainer>}</section>
-        <section className="rounded-md border border-border bg-card p-5 shadow-sm"><h3 className="mb-4 text-sm font-semibold uppercase tracking-wide">Progress Updates by Month</h3>{monthlyData.length === 0 ? <EmptyState /> : <ResponsiveContainer width="100%" height={230}><BarChart data={monthlyData}><CartesianGrid strokeDasharray="3 3" stroke="var(--border)" /><XAxis dataKey="month" /><YAxis domain={[0, 100]} /><Tooltip /><Bar dataKey="average" name="Average progress %" fill="var(--chart-2)" radius={[3, 3, 0, 0]} /></BarChart></ResponsiveContainer>}</section>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <section aria-labelledby="monthly-progress-heading" className="min-w-0 rounded-xl border border-border bg-card p-5 sm:p-6 lg:col-span-8">
+          <div className="mb-6">
+            <h3 id="monthly-progress-heading" className="text-lg font-semibold tracking-tight text-foreground">Progress by reporting month</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Average reported progress (%) · grouped by calendar month across available history</p>
+          </div>
+          {monthlyData.length === 0 ? <EmptyState message="No progress updates are available for this view." /> : (
+            <>
+              <div aria-hidden="true" className="min-w-0">
+                <ResponsiveContainer width="100%" height={256}>
+                  <BarChart data={monthlyData} margin={{ top: 8, right: 8, bottom: 4, left: -14 }}>
+                    <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="4 4" />
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} />
+                    <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tickFormatter={(value) => `${value}%`} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
+                    <Tooltip cursor={{ fill: "var(--muted)", opacity: 0.35 }} contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--popover-foreground)" }} labelStyle={{ color: "var(--popover-foreground)" }} itemStyle={{ color: "var(--popover-foreground)" }} formatter={(value) => [`${value}%`, "Average progress"]} />
+                    <Bar dataKey="average" name="Average progress" fill="var(--chart-1)" radius={[5, 5, 0, 0]} maxBarSize={42} isAnimationActive={false} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <details className="mt-4 border-t border-border pt-3">
+                <summary className="cursor-pointer text-sm font-medium text-primary">View chart data</summary>
+                <table className="mt-3 w-full text-sm">
+                  <caption className="sr-only">Average progress and number of updates by calendar month</caption>
+                  <thead><tr className="text-muted-foreground"><th scope="col" className="py-2 text-left">Month</th><th scope="col" className="py-2 text-right">Updates</th><th scope="col" className="py-2 text-right">Average</th></tr></thead>
+                  <tbody>{monthlyData.map((row) => <tr key={row.month} className="border-t border-border"><td className="py-2">{row.month}</td><td className="py-2 text-right tabular-nums">{row.updates}</td><td className="py-2 text-right tabular-nums">{row.average}%</td></tr>)}</tbody>
+                </table>
+              </details>
+            </>
+          )}
+        </section>
+
+        <section aria-labelledby="activity-status-heading" className="min-w-0 rounded-xl border border-border bg-card p-5 sm:p-6 lg:col-span-4">
+          <h3 id="activity-status-heading" className="text-lg font-semibold tracking-tight text-foreground">Activity breakdown</h3>
+          <p className="mt-1 text-sm text-muted-foreground">Distribution by current status</p>
+          {statusData.length === 0 ? <div className="mt-6"><EmptyState message="No activities to summarize." /></div> : (
+            <ul className="mt-6 space-y-5">
+              {[...statusData].sort((left, right) => right.count - left.count).map((row) => {
+                const share = summary.totalActivities ? Math.min(100, Math.max(0, row.count / summary.totalActivities * 100)) : 0;
+                const color = row.status === "Completed" ? "var(--chart-3)" : row.status === "In Progress" ? "var(--chart-1)" : row.status === "On Hold" ? "var(--chart-4)" : "var(--muted-foreground)";
+                return (
+                  <li key={row.status}>
+                    <div className="mb-2 flex items-start justify-between gap-3 text-sm">
+                      <span className="min-w-0 break-words font-medium text-foreground">{row.status}</span>
+                      <span className="shrink-0 tabular-nums text-muted-foreground">{row.count} · {Math.round(share)}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden="true"><div className="h-full rounded-full" style={{ width: `${share}%`, backgroundColor: color }} /></div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
       </div>
-      <section className="overflow-hidden rounded-md border border-border bg-card shadow-sm">
-        <h3 className="border-b border-border px-5 py-4 text-sm font-semibold uppercase tracking-wide">Recent Activities</h3>
+
+      <section aria-labelledby="recent-activities-heading" className="overflow-hidden rounded-xl border border-border bg-card">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-5 sm:px-6">
+          <div>
+            <h3 id="recent-activities-heading" className="text-lg font-semibold tracking-tight text-foreground">Recent activities</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Latest recorded activities and their current progress</p>
+          </div>
+          <span className="rounded-md bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground">{summary.recentActivities.length} shown</span>
+        </div>
         {summary.recentActivities.length === 0 ? (
           <div className="p-5"><EmptyState message="No recent activities for this project." /></div>
         ) : (
-          <div className="overflow-x-auto">
-          <table className="w-full min-w-[650px] text-sm">
-            <thead className="bg-secondary">
-              <tr>{["Code", "Activity", "District", "Status", "Progress"].map((item) => <th key={item} className="px-4 py-2 text-left text-xs uppercase">{item}</th>)}</tr>
-            </thead>
-            <tbody>
-              {summary.recentActivities.map((item) => (
-                <tr
-                  key={item.id}
-                  role={onOpenActivity ? "link" : undefined}
-                  tabIndex={onOpenActivity ? 0 : undefined}
-                  onClick={() => openActivity(item.id)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      openActivity(item.id);
-                    }
-                  }}
-                  className={`border-t border-border transition-colors ${onOpenActivity ? "cursor-pointer hover:bg-secondary/50 focus:outline-none focus:ring-2 focus:ring-ring/40" : ""}`}
-                >
-                  <td className="px-4 py-2 font-mono text-xs">{item.code}</td>
-                  <td className="px-4 py-2">{item.name}</td>
-                  <td className="px-4 py-2 text-muted-foreground">{item.district}</td>
-                  <td className="px-4 py-2"><span className={`rounded px-2 py-1 text-xs ${badge[item.status] || "border border-border bg-secondary text-foreground"}`}>{item.status}</span></td>
-                  <td className="px-4 py-2">{item.progress_pct}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Recent activities table">
+            <table className="w-full min-w-[650px] text-sm">
+              <caption className="sr-only">Recent activities, status and completion progress</caption>
+              <thead className="bg-secondary/40 text-muted-foreground">
+                <tr>{["Activity", "District", "Status", "Progress"].map((item) => <th key={item} scope="col" className="px-5 py-3 text-left text-xs font-semibold">{item}</th>)}</tr>
+              </thead>
+              <tbody>
+                {summary.recentActivities.map((item) => (
+                  <tr key={item.id} className="border-t border-border transition-colors hover:bg-secondary/20">
+                    <td className="px-5 py-3">
+                      {onOpenActivity ? <button type="button" onClick={() => openActivity(item.id)} className="inline-flex min-h-11 items-center gap-2 text-left text-sm font-semibold text-primary hover:underline">{item.name}<ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /></button> : <p className="font-medium text-foreground">{item.name}</p>}
+                      <p className="text-xs text-muted-foreground">{item.code || "No activity code"}</p>
+                    </td>
+                    <td className="px-5 py-3 text-muted-foreground">{item.district || "—"}</td>
+                    <td className="px-5 py-3"><span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${badge[item.status] || "border border-border bg-secondary text-foreground"}`}>{item.status || "Unspecified"}</span></td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted" aria-hidden="true"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, Math.max(0, Number(item.progress_pct) || 0))}%` }} /></div>
+                        <span className="tabular-nums font-medium text-foreground">{item.progress_pct}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </section>
