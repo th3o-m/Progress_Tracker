@@ -277,7 +277,7 @@ export default function App() {
       >
         {/* Logo */}
         <div className="px-3 py-3 border-b" style={{ borderColor: "var(--sidebar-border)" }}>
-          <div className="flex items-center gap-3">
+          <div className={`flex items-center gap-3 ${sidebarOpen ? "" : "flex-col"}`}>
             <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: "var(--sidebar-primary)" }}>
               <ChartNoAxesColumnIncreasing className="h-5 w-5 text-[#101e60]" aria-hidden="true" />
             </div>
@@ -287,7 +287,7 @@ export default function App() {
                 <p className="truncate" style={{ color: "var(--sidebar-foreground)", fontSize: "0.65rem", opacity: 0.6, lineHeight: 1.2 }}>{selectedMembership?.projects.name || "Project Dashboard"}</p>
               </div>
             )}
-            <button className="ml-auto shrink-0 rounded-md p-2 transition-colors hover:bg-sidebar-accent/50" style={{ color: "var(--sidebar-foreground)" }} onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"} aria-expanded={sidebarOpen} aria-controls="project-navigation">
+            <button className={`${sidebarOpen ? "ml-auto" : ""} shrink-0 rounded-md p-2 transition-colors hover:bg-sidebar-accent/50`} style={{ color: "var(--sidebar-foreground)" }} onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"} aria-expanded={sidebarOpen} aria-controls="project-navigation">
               {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
           </div>
@@ -298,7 +298,7 @@ export default function App() {
               isOrgAdmin={isOrgAdmin}
               loading={projectsLoading}
               newlyJoinedProjectId={newlyJoinedProjectId}
-              onSelect={selectProject}
+              onSelect={(id) => { selectProject(id); if (window.matchMedia("(max-width: 767px)").matches) setSidebarOpen(false); }}
               onProjectsChanged={loadProjects}
             />
           )}
@@ -316,13 +316,7 @@ export default function App() {
                 aria-label={item.label}
                 aria-current={active ? "page" : undefined}
                 title={!sidebarOpen ? item.label : undefined}
-                className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-sidebar-accent/50"
-                style={{
-                  background: active ? "var(--sidebar-accent)" : "transparent",
-                  color: active ? "var(--sidebar-accent-foreground)" : "var(--sidebar-foreground)",
-                  opacity: active ? 1 : 0.75,
-                  
-                }}
+                className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"}`}
               >
                 <item.icon className="w-4 h-4 flex-shrink-0" />
                 {sidebarOpen && (
