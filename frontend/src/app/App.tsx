@@ -103,7 +103,7 @@ export default function App() {
   const activityRoute = activityRouteFromPath();
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [page, setPage] = useState<Page>(mainPageFromUrl);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => !window.matchMedia("(max-width: 767px)").matches);
   const [authenticated, setAuthenticated] = useState<boolean | null>(supabase ? null : true);
   const [passwordRecovery, setPasswordRecovery] = useState(hasPasswordRecoveryToken);
   const [signingOut, setSigningOut] = useState(false);
@@ -262,13 +262,15 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-[100dvh] overflow-hidden bg-background">
+      {sidebarOpen && <button type="button" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} className="fixed inset-0 z-30 bg-foreground/40 md:hidden" />}
       {/* Sidebar */}
       <aside
-        className="flex flex-col transition-all duration-200"
+        id="project-navigation"
+        className={`${sidebarOpen ? "flex" : "hidden md:flex"} fixed inset-y-0 left-0 z-40 flex-col transition-[width] duration-200 md:static md:z-auto`}
         style={{
           width: sidebarOpen ? 280 : 64,
-          background: "linear-gradient(165deg, var(--sidebar), #193182)",
+          background: "var(--sidebar)",
           borderRight: "1px solid var(--sidebar-border)",
           flexShrink: 0,
         }}
@@ -285,7 +287,7 @@ export default function App() {
                 <p className="truncate" style={{ color: "var(--sidebar-foreground)", fontSize: "0.65rem", opacity: 0.6, lineHeight: 1.2 }}>{selectedMembership?.projects.name || "Project Dashboard"}</p>
               </div>
             )}
-            <button className="ml-auto flex-shrink-0 hover:opacity-80 transition-opacity" style={{ color: "var(--sidebar-foreground)" }} onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}>
+            <button className="ml-auto shrink-0 rounded-md p-2 transition-colors hover:bg-sidebar-accent/50" style={{ color: "var(--sidebar-foreground)" }} onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"} aria-expanded={sidebarOpen} aria-controls="project-navigation">
               {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
           </div>
@@ -303,19 +305,23 @@ export default function App() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 py-3 overflow-y-auto">
+        <nav aria-label="Main navigation" className="flex-1 space-y-1 overflow-y-auto px-2 py-3">
           {visibleNavItems.map((item) => {
             const active = page === item.id;
             return (
               <button
                 key={item.id}
-                onClick={() => setPage(item.id)}
-                className="w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-left"
+                type="button"
+                onClick={() => { setPage(item.id); if (window.matchMedia("(max-width: 767px)").matches) setSidebarOpen(false); }}
+                aria-label={item.label}
+                aria-current={active ? "page" : undefined}
+                title={!sidebarOpen ? item.label : undefined}
+                className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-sidebar-accent/50"
                 style={{
                   background: active ? "var(--sidebar-accent)" : "transparent",
-                  color: active ? "#fff" : "var(--sidebar-foreground)",
+                  color: active ? "var(--sidebar-accent-foreground)" : "var(--sidebar-foreground)",
                   opacity: active ? 1 : 0.75,
-                  borderLeft: active ? "3px solid var(--sidebar-primary)" : "3px solid transparent",
+                  
                 }}
               >
                 <item.icon className="w-4 h-4 flex-shrink-0" />
@@ -362,29 +368,22 @@ export default function App() {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar */}
-        <header className="flex items-center justify-between px-6 bg-card border-b border-border" style={{ height: 64, flexShrink: 0 }}>
-          <div>
-            <h1 className="workspace-title text-foreground">{pageTitle[page]}</h1>
-            <p className="text-muted-foreground" style={{ fontSize: "0.72rem" }}>
-              {selectedMembership?.projects.name || "No project selected"} — Republic of Botswana &nbsp;|&nbsp; {new Date().toLocaleDateString("en-BW", { year: "numeric", month: "long", day: "numeric" })}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            {/* Date range */}
-            <div className="flex items-center gap-2 bg-secondary rounded-md px-3 py-1.5 border border-border">
-              <span className="text-muted-foreground" style={{ fontSize: "0.75rem" }}>FY 2026</span>
-              <select className="bg-transparent text-foreground focus:outline-none" style={{ fontSize: "0.75rem" }}>
-                <option>Jan – Dec 2026</option>
-                <option>Q1 2026</option>
-                <option>Q2 2026</option>
-              </select>
+        <header className="flex min-h-[76px] shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border bg-card px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <button type="button" aria-label="Open navigation" aria-expanded={sidebarOpen} aria-controls="project-navigation" onClick={() => setSidebarOpen(true)} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border text-foreground hover:bg-secondary md:hidden"><Menu aria-hidden="true" className="h-5 w-5" /></button>
+            <div className="min-w-0">
+              <h1 className="workspace-title text-foreground">{pageTitle[page]}</h1>
+              <p className="mt-1 max-w-[60ch] truncate text-xs text-muted-foreground">{selectedMembership?.projects.name || "No project selected"}</p>
             </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <time className="hidden text-xs text-muted-foreground xl:block">{new Date().toLocaleDateString("en-BW", { year: "numeric", month: "short", day: "numeric" })}</time>
             <NotificationsBell projectId={selectedProjectId} onNavigate={(target) => setPage(target)} />
             {selectedMembership && (
               <button
                 type="button"
                 onClick={() => { window.location.href = `/projects/${selectedMembership.projects.id}/presentation`; }}
-                className="inline-flex items-center gap-2 rounded-md border border-border bg-secondary px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-accent"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-secondary"
               >
                 <MonitorPlay className="h-4 w-4" />
                 Presentation Mode
@@ -395,7 +394,7 @@ export default function App() {
         </header>
 
         {/* Content */}
-        <main key={selectedProjectId ?? "no-project"} className="flex-1 overflow-y-auto p-6">
+        <main key={selectedProjectId ?? "no-project"} className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           {projectsLoading && supabase && (
             <div className="mb-4 rounded-md border border-border bg-card p-4 text-sm text-muted-foreground" role="status" aria-live="polite">
               Loading your projects...
@@ -420,7 +419,7 @@ export default function App() {
               <p className="mt-2 text-sm text-muted-foreground">Ask an organization administrator to add you to a project, or create one if you are an organization administrator.</p>
             </div>
           )}
-          {selectedMembership && page === "home" && <Overview projectId={selectedMembership.projects.id} onViewChallenges={() => setPage("challenges")} onOpenActivity={openActivity} />}
+          {selectedMembership && page === "home" && <Overview projectId={selectedMembership.projects.id} onViewChallenges={selectedMembership.role === "finance" ? undefined : () => setPage("challenges")} showOperationalInsights={selectedMembership.role !== "finance"} onOpenActivity={openActivity} />}
           {selectedMembership && page !== "home" && <ProjectDataProvider projectId={selectedMembership.projects.id} role={selectedMembership.role}>
             <Suspense fallback={<LoadingScreen embedded message="Loading page…" />}>
             {page === "workplan" && <WorkPlan onOpenActivity={openActivity} />}
